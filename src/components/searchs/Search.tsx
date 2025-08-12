@@ -48,8 +48,14 @@ export default Search;
 
 const styles = StyleSheet.create({
   searchInput: {
-    backgroundColor: colors.backgroundAlt,
-    marginHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: colors.white,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    marginTop: -10,
+    shadowColor: colors.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

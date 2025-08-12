@@ -1,198 +1,345 @@
-import { useEffect, useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
-  ScrollView,
-  StyleSheet,
   View,
-  Dimensions,
+  StyleSheet,
+  ScrollView,
   Image,
+  Dimensions,
   Animated,
+  StatusBar,
+  TouchableOpacity,
 } from "react-native";
 import {
-  Card,
-  Title,
-  Paragraph,
-  Chip,
   Button,
-  Divider,
+  Card,
+  Paragraph,
+  Title,
+  Text,
+  Chip,
+  Surface,
+  Portal,
+  Modal,
 } from "react-native-paper";
-import LottieView from "lottie-react-native";
+import { useRoute, RouteProp } from "@react-navigation/native";
 import { Header, Icon } from "@/components";
-import { colors, myNavigation, IMAGE_URL } from "@/utils";
+import { RootStackParamList, colors, BASE_URL } from "@/utils";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-const AnimalDetailsScreen = ({ route }: any) => {
-  const { animal } = route.params;
-  const { navigate } = myNavigation();
+const AnimalDetailsScreen = () => {
+  const {
+    params: { animal },
+  } = useRoute<RouteProp<RootStackParamList, "รายละเอียด">>();
 
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>("");
+
+  const images = Array.isArray(animal.images)
+    ? animal.images
+    : (animal.images as any)?.$values ?? [];
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-
-    Animated.timing(translateY, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  const calculateAge = (dob?: string) => {
-    if (!dob) return "ไม่ทราบ";
-    const birthDate = new Date(dob);
-    const ageDiffMs = Date.now() - birthDate.getTime();
-    const ageDate = new Date(ageDiffMs);
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 200],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const imageScale = scrollY.interpolate({
+    inputRange: [-100, 0, 100],
+    outputRange: [1.2, 1, 0.9],
+    extrapolate: "clamp",
+  });
+
+  const openImageModal = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setShowModal(true);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.backgroundMain }}>
-      <Header options={{ title: animal.name }} />
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      <Animated.View style={[styles.dynamicHeader, { opacity: headerOpacity }]}>
+        <Header
+          options={{
+            title: animal.name || "รายละเอียด",
+          }}
+        />
+      </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* <LottieView
-          source={require("@/assets/lottie/animal.json")}
-          autoPlay
-          loop
-          style={{ height: 150, marginBottom: 10 }}
-        /> */}
-
-        <Card style={styles.imageCard}>
+      <ScrollView
+        style={styles.scrollView}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <Animated.View
+          style={[styles.heroSection, { transform: [{ scale: imageScale }] }]}
+        >
           <ScrollView
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: false }
+            )}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x / width
+              );
+              setActiveIndex(index);
+            }}
           >
-            {animal.images?.$values.map((img: any, index: number) => (
-              <Image
+            {images.map((img: any, index: number) => (
+              <TouchableOpacity
                 key={index}
-                source={{ uri: `${IMAGE_URL}${img.imageUrl}` }}
-                style={styles.image}
-              />
+                onPress={() => openImageModal(`${BASE_URL}${img.imageUrl}`)}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{ uri: `${BASE_URL}${img.imageUrl}` }}
+                  style={styles.heroImage}
+                />
+                <View style={styles.imageOverlay} />
+              </TouchableOpacity>
             ))}
           </ScrollView>
-        </Card>
 
-        {/* 🧾 ข้อมูลสัตว์พร้อม Animation */}
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ translateY }],
-          }}
-        >
-          <Title style={styles.title}>{animal.name}</Title>
-          <Paragraph style={styles.textCenter}>
-            ชื่อวิทยาศาสตร์: {animal.scientificName}
-          </Paragraph>
-          <Paragraph style={styles.textCenter}>
-            สายพันธุ์: {animal.species}
-          </Paragraph>
-          <Paragraph style={styles.textCenter}>
-            อายุ: {calculateAge(animal.dateOfBirth)} ขวบ
-          </Paragraph>
+          <View style={styles.pagination}>
+            {images.map((_: any, index: number) => {
+              const dotScale = scrollX.interpolate({
+                inputRange: [
+                  (index - 1) * width,
+                  index * width,
+                  (index + 1) * width,
+                ],
+                outputRange: [0.8, 1.2, 0.8],
+                extrapolate: "clamp",
+              });
 
-          <View style={styles.chipContainer}>
-            <Chip icon="alert-circle-outline" style={styles.chip}>
-              สถานะ: {animal.status}
-            </Chip>
+              return (
+                <Animated.View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    { transform: [{ scale: dotScale }] },
+                    activeIndex === index ? styles.activeDot : {},
+                  ]}
+                />
+              );
+            })}
           </View>
 
-          <Card style={styles.detailCard}>
+          <Animated.View style={[styles.floatingTitle, { opacity: fadeAnim }]}>
+            <Text style={styles.heroTitle}>{animal.name}</Text>
+            <Text style={styles.heroSubtitle}>{animal.species}</Text>
+          </Animated.View>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.contentContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={styles.quickInfoSection}>
+            <Surface style={styles.quickInfoCard}>
+              <View style={styles.quickInfoIcon}>
+                <Icon
+                  icon="calendar-outline"
+                  type="Ionicons"
+                  size={24}
+                  color={colors.accentGold}
+                />
+              </View>
+              <Text style={styles.quickInfoLabel}>วันเกิด</Text>
+              <Text style={styles.quickInfoValue}>
+                {animal.dateOfBirth
+                  ? new Date(animal.dateOfBirth!).toLocaleDateString("th-TH")
+                  : "-"}
+              </Text>
+            </Surface>
+
+            <Surface style={styles.quickInfoCard}>
+              <View style={styles.quickInfoIcon}>
+                <Icon
+                  icon="location"
+                  type="Ionicons"
+                  size={24}
+                  color={colors.accentTerracotta}
+                />
+              </View>
+              <Text style={styles.quickInfoLabel}>มาเมื่อ</Text>
+              <Text style={styles.quickInfoValue}>
+                {animal.dateOfBirth
+                  ? new Date(animal.dateOfBirth!).toLocaleDateString("th-TH")
+                  : "-"}
+              </Text>
+            </Surface>
+          </View>
+
+          <Card style={styles.scientificCard} elevation={3}>
+            <Card.Title
+              title="ข้อมูลทางวิทยาศาสตร์"
+              titleStyle={styles.cardTitle}
+              left={(props) => (
+                <View style={styles.iconContainer}>
+                  <Icon
+                    icon="flask"
+                    type="Ionicons"
+                    size={24}
+                    color={colors.accentGold}
+                  />
+                </View>
+              )}
+            />
             <Card.Content>
-              <Title style={styles.sectionTitle}>รายละเอียด</Title>
-              <Paragraph>{animal.description}</Paragraph>
-              <Divider style={{ marginVertical: 10 }} />
-
-              <View style={styles.infoRow}>
-                <Icon
-                  icon="map-marker"
-                  type="MaterialCommunityIcons"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Paragraph style={styles.infoText}>
-                  ถิ่นที่อยู่: {animal.habitat?.name || "ไม่ทราบ"}
-                </Paragraph>
-              </View>
-
-              <View style={styles.infoRow}>
-                <Icon
-                  icon="map-outline"
-                  type="MaterialCommunityIcons"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Paragraph style={styles.infoText}>
-                  พิกัด: {animal.locationCoordinates || "ไม่ทราบ"}
-                </Paragraph>
-              </View>
-
-              <View style={styles.infoRow}>
-                <Icon
-                  icon="calendar"
-                  type="FontAwesome"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Paragraph style={styles.infoText}>
-                  วันเกิด: {animal.dateOfBirth || "ไม่ทราบ"}
-                </Paragraph>
-              </View>
-
-              <View style={styles.infoRow}>
-                <Icon
-                  icon="calendar-check"
-                  type="MaterialCommunityIcons"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Paragraph style={styles.infoText}>
-                  มาถึง: {animal.arrivalDate || "ไม่ทราบ"}
+              <View style={styles.scientificInfo}>
+                <Chip
+                  icon="dna"
+                  style={styles.chip}
+                  textStyle={styles.chipText}
+                >
+                  {animal.scientificName}
+                </Chip>
+                <Paragraph style={styles.description}>
+                  {animal.description}
                 </Paragraph>
               </View>
             </Card.Content>
           </Card>
-        </Animated.View>
 
-        <View style={styles.buttonRow}>
-          <Button
-            mode="contained"
-            onPress={() => navigate("ชำระเงิน", { animalId: animal.animalId })}
-            icon={() => (
-              <Icon
-                icon="hand-holding-heart"
-                type="FontAwesome5"
-                size={18}
-                color={colors.white}
-              />
-            )}
-            style={[styles.button, { backgroundColor: colors.accentGreen }]}
-          >
-            บริจาค
-          </Button>
+          <Card style={styles.habitatCard} elevation={3}>
+            <Card.Title
+              title="ถิ่นที่อยู่อาศัย"
+              titleStyle={styles.cardTitle}
+              left={(props) => (
+                <View style={styles.iconContainer}>
+                  <Icon
+                    icon="tree"
+                    type="FontAwesome5"
+                    size={20}
+                    color={colors.accentGreen}
+                  />
+                </View>
+              )}
+            />
+            <Card.Content>
+              <View style={styles.habitatContent}>
+                <Title style={styles.habitatName}>{animal.habitat?.name}</Title>
+                <Paragraph style={styles.habitatDescription}>
+                  {animal.habitat?.description}
+                </Paragraph>
 
-          <Button
-            mode="outlined"
-            onPress={() => {}}
-            icon={() => (
+                <View style={styles.coordinatesContainer}>
+                  <Icon
+                    icon="location-on"
+                    type="MaterialCommunityIcons"
+                    size={16}
+                    color={colors.accentGold}
+                  />
+                  <Text style={styles.coordinates}>
+                    {animal.locationCoordinates}
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <View style={styles.actionButtons}>
+            <Button
+              mode="contained"
+              onPress={() => {}}
+              style={styles.primaryButton}
+              contentStyle={styles.buttonContent}
+              labelStyle={styles.buttonLabel}
+              icon={() => (
+                <Icon
+                  icon="navigation"
+                  type="MaterialCommunityIcons"
+                  size={20}
+                  color={colors.white}
+                />
+              )}
+            >
+              นำทาง
+            </Button>
+
+            <Button
+              mode="outlined"
+              onPress={() => {}}
+              style={styles.secondaryButton}
+              contentStyle={styles.buttonContent}
+              labelStyle={styles.secondaryButtonLabel}
+            >
               <Icon
-                icon="share-variant"
-                type="MaterialCommunityIcons"
+                icon="favorite-border"
+                type="MaterialIcons"
                 size={20}
-                color={colors.primary}
+                color={colors.accentGold}
               />
-            )}
-            style={styles.button}
-          >
-            แชร์
-          </Button>
-        </View>
+              เพิ่มในรายการโปรด
+            </Button>
+          </View>
+        </Animated.View>
       </ScrollView>
+
+      <Portal>
+        <Modal
+          visible={showModal}
+          onDismiss={() => setShowModal(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            onPress={() => setShowModal(false)}
+          >
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </Modal>
+      </Portal>
     </View>
   );
 };
@@ -201,63 +348,223 @@ export default AnimalDetailsScreen;
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    paddingBottom: 100,
+    flex: 1,
+    backgroundColor: colors.backgroundMain,
   },
-  imageCard: {
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: "hidden",
+  scrollView: {
+    flex: 1,
   },
-  image: {
-    width,
-    height: 250,
+  dynamicHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    elevation: 10,
+  },
+  heroSection: {
+    height: height * 0.5,
+    position: "relative",
+  },
+  heroImage: {
+    width: width,
+    height: height * 0.5,
     resizeMode: "cover",
   },
-  title: {
-    fontSize: 26,
-    textAlign: "center",
-    marginBottom: 6,
-    color: colors.primary,
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
-  textCenter: {
-    textAlign: "center",
-    color: colors.textSecondary,
+  pagination: {
+    flexDirection: "row",
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  chipContainer: {
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    margin: 4,
+  },
+  activeDot: {
+    backgroundColor: colors.accentGold,
+    width: 20,
+  },
+  floatingTitle: {
+    position: "absolute",
+    bottom: 60,
+    left: 20,
+    right: 20,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: colors.white,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: colors.white,
+    opacity: 0.9,
+    marginTop: 4,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  contentContainer: {
+    backgroundColor: colors.backgroundMain,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -30,
+    paddingTop: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  quickInfoSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 24,
+    gap: 12,
+  },
+  quickInfoCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 16,
     alignItems: "center",
-    marginVertical: 10,
+    backgroundColor: colors.backgroundAlt,
+    elevation: 2,
+  },
+  quickInfoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.backgroundMain,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    elevation: 2,
+  },
+  quickInfoLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  quickInfoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  scientificCard: {
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundAlt,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,215,0,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scientificInfo: {
+    gap: 12,
   },
   chip: {
-    backgroundColor: colors.secondary,
+    alignSelf: "flex-start",
+    backgroundColor: colors.accentGold + "20",
   },
-  detailCard: {
-    backgroundColor: colors.backgroundAlt,
-    marginVertical: 16,
-    padding: 8,
-    borderRadius: 12,
+  chipText: {
+    color: colors.accentGold,
+    fontWeight: "600",
   },
-  sectionTitle: {
-    fontSize: 18,
-    marginBottom: 8,
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
     color: colors.textPrimary,
   },
-  infoRow: {
+  habitatCard: {
+    marginBottom: 24,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundAlt,
+  },
+  habitatContent: {
+    gap: 8,
+  },
+  habitatName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.accentGreen,
+  },
+  habitatDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  coordinatesContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    gap: 4,
+    marginTop: 8,
   },
-  infoText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: colors.textPrimary,
+  coordinates: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
-  buttonRow: {
+  actionButtons: {
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: colors.accentGreen,
+    borderRadius: 12,
+    elevation: 3,
+  },
+  secondaryButton: {
+    borderColor: colors.accentGold,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  buttonContent: {
+    height: 48,
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
-  button: {
-    flex: 0.45,
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.white,
+  },
+  secondaryButtonLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.accentGold,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalImage: {
+    width: width * 0.9,
+    height: height * 0.7,
   },
 });

@@ -6,6 +6,7 @@ import { newsApi } from "./apis/news.api";
 import { ticketApi } from "./apis/ticket.api";
 import { eventApi } from "./apis/event.api";
 import { productApi } from "./apis/product.api";
+import { locationApi } from "./apis/location.api";
 import authReducer from "./slices/auth.slice";
 import animalReducer from "./slices/animal.slice";
 import ticketReducer from "./slices/ticket.slice";
@@ -22,6 +23,7 @@ export const store = configureStore({
     [ticketApi.reducerPath]: ticketApi.reducer,
     [eventApi.reducerPath]: eventApi.reducer,
     [productApi.reducerPath]: productApi.reducer,
+    [locationApi.reducerPath]: locationApi.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
@@ -31,7 +33,8 @@ export const store = configureStore({
       newsApi.middleware,
       ticketApi.middleware,
       eventApi.middleware,
-      productApi.middleware
+      productApi.middleware,
+      locationApi.middleware
     ),
 });
 

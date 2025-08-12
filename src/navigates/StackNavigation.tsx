@@ -15,6 +15,7 @@ import {
   SearchScreen,
   SettingScreen,
   FailScreen,
+  MapScreen,
 } from "@/screens";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -26,7 +27,6 @@ const StackNavigation = () => {
         screenOptions={{
           headerShown: false,
         }}
-        initialRouteName="หน้าหลัก"
       >
         <Stack.Screen name="หน้าหลัก" component={HomeScreen} />
         <Stack.Screen name="รายละเอียด" component={AnimalDetailsScreen} />
@@ -50,11 +50,11 @@ const StackNavigation = () => {
           component={SearchScreen}
           options={{ headerShown: true }}
         />
+        <Stack.Screen name="แผนที่" component={MapScreen} />
         <Stack.Screen name="ตั๋ว" component={TicketScreen} />
         <Stack.Screen name="ชำระเงิน" component={PaymentScreen} />
         <Stack.Screen name="เสร็จสิน" component={SuccessScreen} />
         <Stack.Screen name="ล้มเหลว" component={FailScreen} />
-        {/* <Stack.Screen name="บริจาค" component={DonateScreen} /> */}
         <Stack.Screen name="การตั้งค่า" component={SettingScreen} />
         <Stack.Screen
           name="บัญชี"

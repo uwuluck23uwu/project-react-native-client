@@ -9,7 +9,7 @@ const ApplyScreen = () => {
     <View style={styles.container}>
       <View style={styles.center}>
         <Avatar.Image
-          source={require("../../../assets/icon.png")}
+          source={require("@/../assets/icon.png")}
           size={150}
           style={styles.pandaImage}
         />

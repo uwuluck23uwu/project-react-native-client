@@ -45,10 +45,6 @@ const SettingScreen = () => {
         action: handleLogin,
       };
 
-  if (user === null) {
-    return <Loading />;
-  }
-
   return (
     <View style={styles.container}>
       <List.Item
@@ -58,7 +54,7 @@ const SettingScreen = () => {
         left={(props) => (
           <Avatar.Image
             {...props}
-            source={require("../../../assets/icon.png")}
+            source={require("@/../assets/icon.png")}
             style={styles.image}
           />
         )}

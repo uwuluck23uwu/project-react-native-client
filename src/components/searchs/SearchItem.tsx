@@ -6,56 +6,54 @@ import { Animal } from "@/interfaces/animal.interface";
 import myNavigation from "../../utils/myNavigation";
 import colors from "@/utils/colors";
 
-interface SearchItemProps {
+interface Props {
   data: Animal[];
   isSearch?: boolean;
   isSearchActive: boolean;
 }
 
-const SearchItem = memo(
-  ({ data, isSearch = false, isSearchActive }: SearchItemProps) => {
-    const navigation = myNavigation();
+const SearchItem = memo(({ data, isSearch = false, isSearchActive }: Props) => {
+  const { navigate } = myNavigation();
 
-    const renderItem = ({ item }: { item: Animal }) => {
-      if (isSearch && isSearchActive) {
-        return (
-          <ShortCard
-            data={item}
-            onPress={() => {
-              if ("image" in item) {
-                navigation.navigate("รายละเอียด", { animal: item });
-              } else {
-                console.error("Item is not an Animal");
-              }
-            }}
-          />
-        );
-      } else {
-        return (
-          <LongCard
-            data={item}
-            width={400}
-            height={200}
-            onPress={() => {
-              navigation.navigate("รายละเอียด", { animal: item });
-            }}
-          />
-        );
-      }
-    };
+  const renderItem = ({ item }: { item: Animal }) => {
+    if (isSearch && isSearchActive) {
+      return (
+        <ShortCard
+          data={item}
+          onPress={() => {
+            if ("image" in item) {
+              navigate("รายละเอียด", { animal: item });
+            } else {
+              console.error("Item is not an Animal");
+            }
+          }}
+        />
+      );
+    } else {
+      return (
+        <LongCard
+          data={item}
+          width={400}
+          height={200}
+          onPress={() => {
+            navigate("รายละเอียด", { animal: item });
+          }}
+        />
+      );
+    }
+  };
 
-    return (
-      <FlatList
-        key={isSearchActive ? "searchActive" : "searchInactive"}
-        numColumns={2}
-        data={data}
-        keyExtractor={(item) => item.animalId.toString()}
-        renderItem={renderItem}
-        contentContainerStyle={styles.flatList}
-      />
-    );
-  }
-);
+  return (
+    <FlatList
+      key={isSearchActive ? "searchActive" : "searchInactive"}
+      numColumns={2}
+      data={data}
+      keyExtractor={(item) => item.animalId.toString()}
+      renderItem={renderItem}
+      contentContainerStyle={styles.flatList}
+    />
+  );
+});
 
 export default SearchItem;
 

@@ -32,11 +32,7 @@ const SuccessScreen = () => {
             mode="contained"
             icon="paw"
             onPress={() => {
-              if (title == "TicketScreen") {
-                navigate("ตั๋ว");
-              } else {
-                navigate("บริจาค");
-              }
+              navigate("ตั๋ว");
             }}
             style={styles.button}
             labelStyle={styles.buttonLabel}

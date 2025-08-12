@@ -40,7 +40,7 @@ const LoginScreen = () => {
         }) => (
           <View style={styles.formContainer}>
             <Avatar.Image
-              source={require("../../../assets/icon.png")}
+              source={require("@/../assets/icon.png")}
               size={200}
               style={styles.profileImage}
             />

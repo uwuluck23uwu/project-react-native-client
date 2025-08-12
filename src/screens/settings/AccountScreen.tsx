@@ -31,17 +31,13 @@ const AccountScreen = () => {
     }
   }, [user]);
 
-  if (user === null) {
-    return <Loading />;
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.avatarContainer}>
         <Avatar.Image
           size={100}
           source={
-            imageUrl ? { uri: imageUrl } : require("../../../assets/icon.png")
+            imageUrl ? { uri: imageUrl } : require("@/../assets/icon.png")
           }
           style={styles.image}
         />

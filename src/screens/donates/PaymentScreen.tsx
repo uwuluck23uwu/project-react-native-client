@@ -57,10 +57,6 @@ const PaymentScreen = () => {
     console.log("Processing payment...");
   };
 
-  if (user === null) {
-    return <Loading />;
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}

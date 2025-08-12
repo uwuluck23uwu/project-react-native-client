@@ -1,28 +1,64 @@
-import { StyleSheet, Pressable } from "react-native";
-import { Card, Paragraph, Title, IconButton } from "react-native-paper";
+import { useRef } from "react";
+import { StyleSheet, Pressable, Animated, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Card, Paragraph, Title, Surface } from "react-native-paper";
 import { colors } from "@/utils";
+import Icon from "../Icon";
 
 export const ShortCard = ({ data, onPress }: any) => {
-  const { name, image, description, breed, rating } = data;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { name, image, breed, rating } = data;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
-    <Pressable onPress={onPress}>
-      <Card style={styles.cardContainer}>
-        <Card.Cover source={{ uri: image }} style={styles.cardImage} />
-        <Card.Content style={styles.cardContent}>
-          <Title style={styles.title}>{name || "ไม่ระบุชื่อ"}</Title>
-          <Paragraph style={styles.paragraph}>
-            สายพันธุ์: {breed || "ไม่ระบุสายพันธุ์"}
-          </Paragraph>
-          <Paragraph style={styles.paragraph}>
-            {description || "ไม่มีข้อมูลเพิ่มเติม"}
-          </Paragraph>
-        </Card.Content>
-        <Card.Actions style={styles.cardActions}>
-          <IconButton icon="star" iconColor={colors.accentGold} size={16} />
-          <Paragraph style={styles.ratingText}>{rating || 0}</Paragraph>
-        </Card.Actions>
-      </Card>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Surface style={styles.enhancedShortCard} elevation={5}>
+          <View style={styles.shortCardImageContainer}>
+            <Card.Cover source={{ uri: image }} style={styles.shortCardImage} />
+            <LinearGradient
+              colors={["transparent", colors.black60]}
+              style={styles.shortCardGradient}
+            />
+          </View>
+
+          <View style={styles.shortCardContent}>
+            <Title style={styles.shortCardTitle}>{name || "ไม่ระบุชื่อ"}</Title>
+            <Paragraph style={styles.shortCardBreed}>
+              {breed || "ไม่ระบุสายพันธุ์"}
+            </Paragraph>
+
+            <View style={styles.shortCardActions}>
+              <Icon
+                type="AntDesign"
+                icon="star"
+                size={14}
+                color={colors.accentGold}
+              />
+              <Paragraph style={styles.shortCardRating}>
+                {rating || 0}
+              </Paragraph>
+            </View>
+          </View>
+        </Surface>
+      </Animated.View>
     </Pressable>
   );
 };
@@ -30,46 +66,48 @@ export const ShortCard = ({ data, onPress }: any) => {
 export default ShortCard;
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    width: 200,
-    marginRight: 10,
-    backgroundColor: colors.backgroundMain,
-    borderRadius: 12,
-    borderColor: colors.platinum,
-    borderWidth: 1,
+  enhancedShortCard: {
+    borderRadius: 15,
+    backgroundColor: "#ffffff",
     overflow: "hidden",
-    elevation: 2,
+    marginBottom: 15,
   },
-  cardImage: {
-    height: 160,
+  shortCardImageContainer: {
+    position: "relative",
+  },
+  shortCardImage: {
+    height: 140,
     resizeMode: "cover",
   },
-  cardContent: {
-    backgroundColor: colors.backgroundAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  shortCardGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "40%",
   },
-  title: {
+  shortCardContent: {
+    padding: 12,
+  },
+  shortCardTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: colors.primary,
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  paragraph: {
-    fontSize: 13,
+  shortCardBreed: {
+    fontSize: 12,
     color: colors.textSecondary,
-    marginBottom: 2,
+    marginBottom: 8,
   },
-  cardActions: {
+  shortCardActions: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    backgroundColor: colors.backgroundAlt,
   },
-  ratingText: {
-    fontSize: 13,
+  shortCardRating: {
+    fontSize: 12,
     color: colors.textPrimary,
-    marginLeft: 4,
+    marginLeft: 5,
+    fontWeight: "500",
   },
 });

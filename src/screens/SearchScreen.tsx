@@ -42,9 +42,7 @@ const SearchScreen = () => {
     ]);
   }, [animals, debouncedSearchText]);
 
-  if (isLoading) {
-    return <Loading />;
-  }
+  if (isLoading) return <Loading />;
 
   return (
     <View style={styles.container}>

@@ -3,11 +3,22 @@ import { FAB, Title } from "react-native-paper";
 import { View, FlatList, StyleSheet } from "react-native";
 import { useGetTicketsQuery } from "@/reduxs/apis/ticket.api";
 import { Header, TicketCard, Loading } from "@/components";
-import { myNavigation, colors } from "@/utils";
+import { myNavigation, colors, BASE_URL } from "@/utils";
 
 const TicketScreen = () => {
   const navigation = myNavigation();
-  const { data: tickets = [], isLoading } = useGetTicketsQuery({});
+  const { data, isLoading } = useGetTicketsQuery({});
+
+  const tickets = (data?.data?.$values ?? []).map((t: any) => {
+    const imageUrl = t.images?.$values?.[0]?.imageUrl;
+    return {
+      ...t,
+      image: imageUrl ? `${BASE_URL}${imageUrl}` : null,
+      name: t.ticketType,
+      id: t.ticketId,
+    };
+  });
+
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
 
   const increaseQuantity = (id: string) => {

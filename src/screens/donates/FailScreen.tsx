@@ -40,11 +40,7 @@ const FailScreen = () => {
           <Button
             mode="contained"
             onPress={() => {
-              if (title == "TicketScreen") {
-                navigation.navigate("ตั๋ว");
-              } else {
-                navigation.navigate("บริจาค");
-              }
+              navigation.navigate("ตั๋ว");
             }}
             style={styles.buttonDonate}
             labelStyle={styles.buttonText}
