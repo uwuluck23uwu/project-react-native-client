@@ -1,30 +1,61 @@
-import React, { useEffect, useRef } from "react";
-import { StyleSheet, View, Animated, Dimensions } from "react-native";
-import { Appbar, Text } from "react-native-paper";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  StyleSheet,
+  View,
+  Animated,
+  Dimensions,
+  TouchableOpacity,
+  Modal,
+  Platform,
+  StatusBar,
+} from "react-native";
+import { Appbar, Text, Surface } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useNavigation } from "@react-navigation/native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/reduxs/store";
+import { logout } from "@/reduxs/slices/auth.slice";
 import { Icon } from "@/components";
 import colors, { gradients } from "@/utils/colors";
+import { BASE_URL } from "@/utils";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-interface Props {
+interface Prop {
   options: {
     title?: string;
   };
 }
 
-const Header = ({ options }: Props) => {
-  const { openDrawer } = useNavigation<DrawerNavigationProp<any>>();
+const Header = ({ options }: Prop) => {
+  const { openDrawer, navigate } = useNavigation<DrawerNavigationProp<any>>();
+  const dispatch = useDispatch();
 
+  // Redux state
+  const { accessToken, username, imageUrl } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const isAuthenticated = !!accessToken;
+
+  // Local state
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Animation refs
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
+  // Auth buttons animations
+  const authButtonsScale = useRef(new Animated.Value(0)).current;
+  const authButtonsOpacity = useRef(new Animated.Value(0)).current;
+  const userMenuScale = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
+    // Initial header animations
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -44,6 +75,7 @@ const Header = ({ options }: Props) => {
       }),
     ]).start();
 
+    // Shimmer animation
     const shimmerLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -63,6 +95,40 @@ const Header = ({ options }: Props) => {
     return () => shimmerLoop.stop();
   }, []);
 
+  // Animate auth buttons based on authentication state
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Hide auth buttons, show user menu
+      Animated.parallel([
+        Animated.timing(authButtonsScale, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(authButtonsOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Show auth buttons, hide user menu
+      Animated.parallel([
+        Animated.spring(authButtonsScale, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(authButtonsOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isAuthenticated]);
+
   const handleMenuPress = () => {
     Animated.sequence([
       Animated.timing(rotateAnim, {
@@ -80,6 +146,29 @@ const Header = ({ options }: Props) => {
     openDrawer();
   };
 
+  const handleUserMenuToggle = () => {
+    const newValue = !showUserMenu;
+    setShowUserMenu(newValue);
+
+    Animated.spring(userMenuScale, {
+      toValue: newValue ? 1 : 0,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    dispatch(logout());
+  };
+
+  const handleProfile = () => {
+    setShowUserMenu(false);
+    navigate("Profile" as never);
+  };
+
+  // Animation interpolations
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
@@ -90,112 +179,192 @@ const Header = ({ options }: Props) => {
     outputRange: [-width, width],
   });
 
-  return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-          opacity: fadeAnim,
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={gradients.tuscanHills.colors}
-        start={gradients.tuscanHills.start}
-        end={gradients.tuscanHills.end}
-        style={styles.gradient}
+  const renderAuthButtons = () => {
+    if (isAuthenticated) return null;
+
+    return (
+      <Animated.View
+        style={[
+          styles.authButtonsContainer,
+          {
+            transform: [{ scale: authButtonsScale }],
+            opacity: authButtonsOpacity,
+          },
+        ]}
       >
-        <Animated.View
-          style={[
-            styles.shimmer,
-            {
-              transform: [{ translateX: shimmerTranslateX }],
-            },
-          ]}
-        />
+        <TouchableOpacity
+          style={styles.authButton}
+          onPress={() => navigate("สมาชิก")}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[colors.accentGold, colors.accentGoldDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.authButtonGradient}
+          >
+            <Text style={styles.authButtonText}>เข้าสู่ระบบ</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
-        <View style={styles.decorativeElements}>
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-        </View>
+  const renderUserMenu = () => {
+    if (!isAuthenticated) return null;
 
-        <View style={styles.headerContent}>
+    return (
+      <View style={styles.userMenuContainer}>
+        <TouchableOpacity
+          style={styles.userButton}
+          onPress={handleUserMenuToggle}
+          activeOpacity={0.8}
+        >
+          <View style={styles.userAvatar}>
+            {imageUrl ? (
+              <Animated.Image
+                source={{ uri: `${BASE_URL}${imageUrl}` }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {username?.charAt(0)?.toUpperCase() || "U"}
+              </Text>
+            )}
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.welcomeText}>สวัสดี</Text>
+            <Text style={styles.usernameText} numberOfLines={1}>
+              {username || "User"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* User Menu Dropdown */}
+        {showUserMenu && (
           <Animated.View
             style={[
-              styles.menuButton,
+              styles.userDropdown,
               {
-                transform: [{ rotate: rotateInterpolate }],
+                transform: [{ scale: userMenuScale }],
               },
             ]}
           >
-            <Appbar.Action
-              icon="menu"
-              iconColor={colors.white}
-              onPress={handleMenuPress}
-              style={styles.menuIcon}
-            />
+            <BlurView intensity={20} style={styles.dropdownBlur}>
+              <Surface style={styles.dropdownSurface} elevation={4}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={handleProfile}
+                >
+                  <Icon
+                    icon="account-outline"
+                    type="MaterialCommunityIcons"
+                    size={18}
+                    color={colors.textPrimary}
+                  />
+                  <Text style={styles.dropdownItemText}>ข้อมูลส่วนตัว</Text>
+                </TouchableOpacity>
+
+                <View style={styles.dropdownDivider} />
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={handleLogout}
+                >
+                  <Icon
+                    icon="logout"
+                    type="MaterialCommunityIcons"
+                    size={18}
+                    color={colors.error}
+                  />
+                  <Text
+                    style={[styles.dropdownItemText, { color: colors.error }]}
+                  >
+                    ออกจากระบบ
+                  </Text>
+                </TouchableOpacity>
+              </Surface>
+            </BlurView>
           </Animated.View>
+        )}
+      </View>
+    );
+  };
 
-          <Animated.View style={styles.titleContainer}>
-            <View style={styles.titleWrapper}>
-              <Text style={styles.title}>
-                {options?.title || "Primo Piazza"}
-              </Text>
-            </View>
-          </Animated.View>
+  return (
+    <>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.primary}
+        translucent={false}
+      />
 
-          <View style={styles.actionButtons}>
-            <Animated.View
-              style={[
-                styles.actionButton,
-                {
-                  transform: [
-                    {
-                      scale: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Icon
-                icon="bell-outline"
-                type="MaterialCommunityIcons"
-                size={22}
-                color={colors.white}
-              />
-            </Animated.View>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            opacity: fadeAnim,
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={gradients.tuscanHills.colors}
+          start={gradients.tuscanHills.start}
+          end={gradients.tuscanHills.end}
+          style={styles.gradient}
+        >
+          <Animated.View
+            style={[
+              styles.shimmer,
+              {
+                transform: [{ translateX: shimmerTranslateX }],
+              },
+            ]}
+          />
 
-            <Animated.View
-              style={[
-                styles.actionButton,
-                {
-                  transform: [
-                    {
-                      scale: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Icon
-                icon="heart-outline"
-                type="MaterialCommunityIcons"
-                size={22}
-                color={colors.white}
-              />
-            </Animated.View>
+          <View style={styles.decorativeElements}>
+            <View style={[styles.circle, styles.circle1]} />
+            <View style={[styles.circle, styles.circle2]} />
+            <View style={[styles.circle, styles.circle3]} />
           </View>
-        </View>
-      </LinearGradient>
-    </Animated.View>
+
+          <View style={styles.headerContent}>
+            {/* Menu Button */}
+            <Animated.View
+              style={[
+                styles.menuButton,
+                {
+                  transform: [{ rotate: rotateInterpolate }],
+                },
+              ]}
+            >
+              <Appbar.Action
+                icon="menu"
+                iconColor={colors.white}
+                onPress={handleMenuPress}
+                style={styles.menuIcon}
+              />
+            </Animated.View>
+
+            {/* Title */}
+            <Animated.View style={styles.titleContainer}>
+              <View style={styles.titleWrapper}>
+                <Text style={styles.title}>
+                  {options?.title || "Primo Piazza"}
+                </Text>
+              </View>
+            </Animated.View>
+
+            {/* Right Side - Auth buttons or User menu */}
+            <View style={styles.rightSection}>
+              {renderAuthButtons()}
+              {renderUserMenu()}
+            </View>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+    </>
   );
 };
 
@@ -207,10 +376,10 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   gradient: {
-    height: 120,
+    height: 130,
     position: "relative",
     overflow: "hidden",
-    paddingTop: 8,
+    paddingTop: Platform.OS === "ios" ? 8 : 8,
   },
   shimmer: {
     position: "absolute",
@@ -257,13 +426,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 40,
+    paddingTop: Platform.OS === "ios" ? 50 : 40,
     paddingBottom: 20,
     position: "relative",
     zIndex: 2,
   },
   menuButton: {
-    backgroundColor: colors.shimmer,
+    backgroundColor: colors.white20,
     borderRadius: 25,
     elevation: 3,
     shadowColor: colors.shadowColor,
@@ -280,51 +449,203 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   titleWrapper: {
-    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 2,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    marginLeft: 10,
     color: colors.white,
-    textShadowColor: colors.black60,
+    textShadowColor: colors.black40,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
     letterSpacing: 0.5,
   },
-  subtitle: {
-    fontSize: 12,
-    color: colors.white80,
-    fontStyle: "italic",
-    textShadowColor: colors.black60,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+
+  // Right Section
+  rightSection: {
+    minWidth: 80,
+    alignItems: "flex-end",
   },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 10,
+
+  // Auth Buttons
+  authButtonsContainer: {
+    alignItems: "flex-end",
   },
-  actionButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.shimmer,
+  authButton: {
     borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: "hidden",
     elevation: 3,
     shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  waveContainer: {
+  authButtonGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authButtonText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: colors.white,
+  },
+
+  // User Menu
+  userMenuContainer: {
+    position: "relative",
+  },
+  userButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white20,
+    borderRadius: 25,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    elevation: 3,
+    shadowColor: colors.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accentGold,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  avatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: colors.white,
+  },
+  userInfo: {
+    alignItems: "flex-start",
+  },
+  welcomeText: {
+    fontSize: 10,
+    color: colors.white80,
+  },
+  usernameText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: colors.white,
+    maxWidth: 60,
+  },
+
+  // User Dropdown
+  userDropdown: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
+    top: 50,
     right: 0,
-    height: 20,
+    zIndex: 1000,
+    minWidth: 160,
+  },
+  dropdownBlur: {
+    borderRadius: 12,
     overflow: "hidden",
+  },
+  dropdownSurface: {
+    borderRadius: 12,
+    backgroundColor: colors.white95,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginLeft: 12,
+    fontWeight: "500",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: colors.platinum,
+    marginHorizontal: 16,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.black50,
+  },
+  modalContent: {
+    width: width * 0.85,
+    maxWidth: 400,
+  },
+  modalSurface: {
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  modalGradient: {
+    padding: 30,
+    alignItems: "center",
+  },
+  modalHeader: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: colors.primary,
+    textAlign: "center",
+    marginTop: 5,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 10,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    width: "100%",
+    gap: 12,
+  },
+  modalButton: {
+    width: "100%",
+    borderRadius: 25,
+    overflow: "hidden",
+    elevation: 2,
+  },
+  modalButtonGradient: {
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.white,
+  },
+  modalCloseButton: {
+    marginTop: 20,
+    padding: 10,
+  },
+  modalCloseText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
   },
 });

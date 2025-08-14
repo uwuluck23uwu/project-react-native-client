@@ -11,7 +11,7 @@ import { Text, Surface } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils";
 import { useGetLocationsQuery } from "@/reduxs/apis/location.api";
-import { Header, Icon, Loading } from "@/components";
+import { Header, Icon, Loading, Pin } from "@/components";
 import type { Location } from "@/interfaces/location.interface";
 import MapModal, { Marker } from "@/components/modal/MapModal";
 
@@ -75,136 +75,6 @@ function pickIconAndColor(acts: string[]) {
     color: colors.textMuted,
   };
 }
-
-const AnimatedPin = ({
-  marker,
-  onPress,
-  index,
-  mapWidth,
-  mapHeight,
-}: {
-  marker: Marker;
-  onPress: () => void;
-  index: number;
-  mapWidth: number;
-  mapHeight: number;
-}) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const bounceAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const delay = index * 120;
-    Animated.sequence([
-      Animated.delay(delay),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 120,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.15,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const left = (marker.x / 100) * mapWidth - 35;
-  const top = (marker.y / 100) * mapHeight - 35;
-
-  const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(bounceAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <View style={{ position: "absolute", left, top, alignItems: "center" }}>
-      <Animated.View
-        style={[
-          styles.glowEffect,
-          {
-            backgroundColor: marker.color,
-            opacity: glowAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.1, 0.3],
-            }),
-            transform: [{ scale: scaleAnim }, { scale: pulseAnim }],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.pinContainer,
-          {
-            transform: [
-              { scale: scaleAnim },
-              { scale: pulseAnim },
-              {
-                translateY: bounceAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -15],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={handlePress}
-          style={[styles.modernPin, { backgroundColor: marker.color }]}
-          activeOpacity={0.8}
-        >
-          <Icon
-            icon={marker.icon}
-            type={marker.iconType}
-            size={28}
-            color={colors.white}
-          />
-          <View style={[styles.pinShadow, { backgroundColor: marker.color }]} />
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  );
-};
 
 const MapScreen = () => {
   const [selectedLocation, setSelectedLocation] = useState<Marker | null>(null);
@@ -340,7 +210,7 @@ const MapScreen = () => {
         >
           {mapSize.width > 0 &&
             filtered.map((marker, index) => (
-              <AnimatedPin
+              <Pin
                 key={marker.id}
                 marker={marker}
                 onPress={() => handleLocationPress(marker)}
@@ -435,57 +305,6 @@ const styles = StyleSheet.create({
   mapContainer: { flex: 1 },
   mapFull: { flex: 1, position: "relative" },
   mapImage: { borderRadius: 0 },
-
-  glowEffect: {
-    position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    top: -10,
-    left: -10,
-  },
-  pinContainer: { alignItems: "center" },
-  modernPin: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 4,
-    borderColor: colors.white,
-    position: "relative",
-    zIndex: 2,
-  },
-  pinShadow: {
-    position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    opacity: 0.3,
-    top: 6,
-    left: 0,
-    zIndex: 1,
-  },
-  pinLabelContainer: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.cream,
-    elevation: 4,
-    shadowColor: colors.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  modernPinLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    textAlign: "center",
-  },
 
   modernFilterBar: {
     backgroundColor: colors.white,

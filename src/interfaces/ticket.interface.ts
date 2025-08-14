@@ -5,8 +5,6 @@ export interface Ticket {
   ticketType: string;
   description?: string;
   price?: number;
-  purchaseDate?: string;
-  visitDate?: string;
   createdAt?: string;
   updatedAt?: string;
   images?: Image[];

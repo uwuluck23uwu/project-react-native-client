@@ -8,7 +8,7 @@ import {
   Text,
   IconButton,
 } from "react-native-paper";
-import { Loading } from "@/components";
+import { Header, Loading } from "@/components";
 import { RootState } from "@/reduxs/store";
 import { myNavigation, colors } from "@/utils";
 
@@ -32,69 +32,72 @@ const AccountScreen = () => {
   }, [user]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <Avatar.Image
-          size={100}
-          source={
-            imageUrl ? { uri: imageUrl } : require("@/../assets/icon.png")
-          }
-          style={styles.image}
-        />
-        <IconButton
-          icon="camera"
-          size={24}
-          style={styles.cameraIcon}
-          iconColor={colors.accentGreen}
+    <>
+      <Header options={{ title: "บัญชี" }} />
+      <View style={styles.container}>
+        <View style={styles.avatarContainer}>
+          <Avatar.Image
+            size={100}
+            source={
+              imageUrl ? { uri: imageUrl } : require("@/../assets/icon.png")
+            }
+            style={styles.image}
+          />
+          <IconButton
+            icon="camera"
+            size={24}
+            style={styles.cameraIcon}
+            iconColor={colors.accentGreen}
+            onPress={() => {
+              // TODO: เปิดกล้องหรือเลือกรูปจากเครื่อง
+            }}
+          />
+          <Text style={styles.updateText}>อัปเดตรูปโปรไฟล์</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            label="ชื่อผู้ใช้"
+            value={username}
+            mode="outlined"
+            style={styles.input}
+            onChangeText={setUsername}
+          />
+          <TextInput
+            label="อีเมล์"
+            value={email}
+            mode="outlined"
+            style={styles.input}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            label="เบอร์โทร"
+            value={phone}
+            mode="outlined"
+            style={styles.input}
+            onChangeText={setPhone}
+          />
+          <TextInput
+            label="วันเกิด"
+            value={birthday}
+            mode="outlined"
+            style={styles.input}
+            onChangeText={setBirthday}
+          />
+        </View>
+
+        <Button
+          mode="contained"
+          style={styles.confirmButton}
           onPress={() => {
-            // TODO: เปิดกล้องหรือเลือกรูปจากเครื่อง
+            // TODO: ส่งข้อมูลที่แก้ไขไปยัง backend หรือ redux dispatch
           }}
-        />
-        <Text style={styles.updateText}>อัปเดตรูปโปรไฟล์</Text>
+          icon="pencil"
+        >
+          ยืนยัน
+        </Button>
       </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          label="ชื่อผู้ใช้"
-          value={username}
-          mode="outlined"
-          style={styles.input}
-          onChangeText={setUsername}
-        />
-        <TextInput
-          label="อีเมล์"
-          value={email}
-          mode="outlined"
-          style={styles.input}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          label="เบอร์โทร"
-          value={phone}
-          mode="outlined"
-          style={styles.input}
-          onChangeText={setPhone}
-        />
-        <TextInput
-          label="วันเกิด"
-          value={birthday}
-          mode="outlined"
-          style={styles.input}
-          onChangeText={setBirthday}
-        />
-      </View>
-
-      <Button
-        mode="contained"
-        style={styles.confirmButton}
-        onPress={() => {
-          // TODO: ส่งข้อมูลที่แก้ไขไปยัง backend หรือ redux dispatch
-        }}
-        icon="pencil"
-      >
-        ยืนยัน
-      </Button>
-    </View>
+    </>
   );
 };
 

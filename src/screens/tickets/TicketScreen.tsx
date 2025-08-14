@@ -1,25 +1,57 @@
-import { useState } from "react";
-import { FAB, Title } from "react-native-paper";
-import { View, FlatList, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { Ticket } from "@/interfaces/ticket.interface";
 import { useGetTicketsQuery } from "@/reduxs/apis/ticket.api";
-import { Header, TicketCard, Loading } from "@/components";
+import { Header, Loading, TicketCard } from "@/components";
 import { myNavigation, colors, BASE_URL } from "@/utils";
 
 const TicketScreen = () => {
   const navigation = myNavigation();
   const { data, isLoading } = useGetTicketsQuery({});
 
-  const tickets = (data?.data?.$values ?? []).map((t: any) => {
-    const imageUrl = t.images?.$values?.[0]?.imageUrl;
-    return {
-      ...t,
-      image: imageUrl ? `${BASE_URL}${imageUrl}` : null,
-      name: t.ticketType,
-      id: t.ticketId,
-    };
-  });
+  const scrollY = useSharedValue(0);
+  const fabScale = useSharedValue(0);
+  const resetFabScale = useSharedValue(0);
 
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
+  const [selectedTotal, setSelectedTotal] = useState(0);
+
+  const tickets: Ticket[] = (data?.data?.$values ?? []).map((t: any) => {
+    const images = (t.images?.$values ?? []).map((img: any) => ({
+      ...img,
+      imageUrl: img?.imageUrl ? `${BASE_URL}${img.imageUrl}` : undefined,
+    }));
+
+    return {
+      ...t,
+      images,
+    } as Ticket;
+  });
+
+  useEffect(() => {
+    const total = tickets.reduce((sum, item) => {
+      const quantity = quantities[item.ticketId] || 0;
+      return sum + quantity * (item.price || 0);
+    }, 0);
+    setSelectedTotal(total);
+
+    const hasItems = Object.values(quantities).some((q) => q > 0);
+    fabScale.value = withSpring(hasItems ? 1 : 0);
+    resetFabScale.value = withSpring(hasItems ? 1 : 0);
+  }, [quantities]);
 
   const increaseQuantity = (id: string) => {
     setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -36,9 +68,19 @@ const TicketScreen = () => {
     setQuantities({});
   };
 
-  const setQuantity = (id: string, value: number) => {
-    setQuantities((prev) => ({ ...prev, [id]: value }));
-  };
+  const fabAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: fabScale.value }],
+      opacity: fabScale.value,
+    };
+  });
+
+  const resetFabAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: resetFabScale.value }],
+      opacity: resetFabScale.value,
+    };
+  });
 
   if (isLoading) return <Loading />;
 
@@ -49,54 +91,62 @@ const TicketScreen = () => {
       <FlatList
         data={tickets}
         keyExtractor={(item) => item.ticketId}
-        ListHeaderComponent={
-          <Title style={styles.titleText}>เลือกตั๋วที่ต้องการซื้อ</Title>
-        }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <TicketCard
-            data={item}
+            item={item}
+            index={index}
             quantity={quantities[item.ticketId] || 0}
-            increaseQuantity={() => increaseQuantity(item.ticketId)}
-            decreaseQuantity={() => decreaseQuantity(item.ticketId)}
-            setQuantity={(value: any) => setQuantity(item.ticketId, value)}
+            onIncrease={() => increaseQuantity(item.ticketId)}
+            onDecrease={() => decreaseQuantity(item.ticketId)}
           />
         )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
+        onScroll={({ nativeEvent }) => {
+          scrollY.value = nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       />
 
-      {Object.values(quantities).some((q) => q > 0) && (
-        <View>
-          <FAB
-            style={styles.fab}
-            label="ชำระเงิน"
-            icon="cash-register"
-            color={colors.white}
-            onPress={() => {
-              const selectedTickets = Object.entries(quantities)
-                .filter(([_, qty]) => qty > 0)
-                .map(([id, qty]) => `${id}:${qty}`);
+      <Animated.View style={[styles.fabContainer, fabAnimatedStyle]}>
+        <BlurView intensity={20} style={styles.fabBlur}>
+          <LinearGradient
+            colors={[colors.accentGreen, colors.accentGreenDark]}
+            style={styles.fabGradient}
+          >
+            <TouchableOpacity
+              style={styles.fabButton}
+              onPress={() => {
+                const selectedTickets = Object.entries(quantities)
+                  .filter(([_, qty]) => qty > 0)
+                  .map(([id, qty]) => `${id}:${qty}`);
 
-              const total = tickets.reduce((sum: any, item: any) => {
-                const quantity = quantities[item.ticketId] || 0;
-                return sum + quantity * (item.price || 0);
-              }, 0);
+                navigation.navigate("ชำระเงิน", {
+                  title: "TicketScreen",
+                  price: selectedTotal,
+                  ticketIds: selectedTickets,
+                });
+              }}
+            >
+              <Text style={styles.fabText}>💳 ชำระเงิน</Text>
+              <Text style={styles.fabSubText}>
+                ฿{selectedTotal.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </BlurView>
+      </Animated.View>
 
-              navigation.navigate("ชำระเงิน", {
-                title: "TicketScreen",
-                price: total,
-                ticketIds: selectedTickets,
-              });
-            }}
-          />
-
-          <FAB
-            style={styles.fabReset}
-            label="ยกเลิก"
-            icon="close"
-            color={colors.white}
-            onPress={resetQuantities}
-          />
-        </View>
-      )}
+      <Animated.View style={[styles.resetFabContainer, resetFabAnimatedStyle]}>
+        <TouchableOpacity style={styles.resetFab} onPress={resetQuantities}>
+          <LinearGradient
+            colors={[colors.accentGold, colors.accentGoldDark]}
+            style={styles.resetFabGradient}
+          >
+            <Text style={styles.resetFabText}>🗑️ ยกเลิก</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 };
@@ -108,26 +158,157 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundMain,
   },
-  fab: {
+
+  listContainer: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+
+  imageContainer: {
+    width: 120,
+    height: 120,
+    marginRight: 16,
+    position: "relative",
+  },
+  ticketImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    backgroundColor: colors.platinum,
+  },
+  imagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  placeholderText: {
+    fontSize: 40,
+    opacity: 0.5,
+  },
+  priceBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  priceBadgeGradient: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  priceText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+  },
+
+  contentSection: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  ticketTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  ticketDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+
+  quantityContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  quantityButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quantityButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: colors.white,
+  },
+  quantityDisplay: {
+    minWidth: 50,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 12,
+    backgroundColor: colors.white,
+  },
+  quantityText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+  },
+  itemTotalContainer: {
+    alignSelf: "flex-end",
+  },
+  itemTotalText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: colors.accentGreen,
+  },
+
+  fabContainer: {
     position: "absolute",
     right: 20,
     bottom: 20,
-    backgroundColor: colors.accentGreen,
+    borderRadius: 30,
+    overflow: "hidden",
   },
-  fabReset: {
+  fabBlur: {
+    borderRadius: 30,
+  },
+  fabGradient: {
+    borderRadius: 30,
+  },
+  fabButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.white,
+    marginBottom: 2,
+  },
+  fabSubText: {
+    fontSize: 14,
+    color: colors.cream,
+  },
+
+  resetFabContainer: {
     position: "absolute",
     left: 20,
     bottom: 20,
-    backgroundColor: colors.accentGold,
   },
-  titleText: {
-    fontSize: 24,
+  resetFab: {
+    borderRadius: 25,
+    overflow: "hidden",
+  },
+  resetFabGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resetFabText: {
+    fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 10,
-    marginTop: 16,
-    marginLeft: 16,
-    alignSelf: "flex-start",
-    textAlign: "left",
-    color: colors.textPrimary,
+    color: colors.white,
   },
 });

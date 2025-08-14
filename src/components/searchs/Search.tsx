@@ -2,7 +2,7 @@ import { StyleSheet } from "react-native";
 import { TextInput } from "react-native-paper";
 import { colors } from "@/utils";
 
-type SearchProps = {
+type Prop = {
   value: string;
   onChangeText: (text: string) => void;
   onIconPress?: () => void;
@@ -16,7 +16,7 @@ const Search = ({
   onIconPress,
   placeholder = "ค้นหาสัตว์ที่ต้องการ",
   editable = true,
-}: SearchProps) => {
+}: Prop) => {
   return (
     <TextInput
       mode="outlined"

@@ -33,6 +33,6 @@ export type RootStackParamList = {
     title?: string;
   };
 
-  การตั้งค่า: undefined;
+  ตั้งค่า: undefined;
   บัญชี: undefined;
 };
