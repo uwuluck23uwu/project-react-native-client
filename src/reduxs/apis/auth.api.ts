@@ -22,6 +22,7 @@ const customBaseQuery = async (args: any, api: any, extraOptions: any) => {
 export const authApi = createApi({
   reducerPath: "authenApi",
   baseQuery: customBaseQuery,
+  tagTypes: ["Authens"],
   endpoints: (builder) => ({
     getUser: builder.mutation({
       query: (id) => ({

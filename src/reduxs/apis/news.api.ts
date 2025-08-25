@@ -6,10 +6,12 @@ export const newsApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/news`,
   }),
+  tagTypes: ["News"],
   endpoints: (builder) => ({
     getNews: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getallnews?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "News", id: "LIST" }],
     }),
     getNewsById: builder.query({
       query: (id) => `getnews/${id}`,

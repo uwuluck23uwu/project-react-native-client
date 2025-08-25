@@ -6,10 +6,12 @@ export const ticketApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/ticket`,
   }),
+  tagTypes: ["Tickets"],
   endpoints: (builder) => ({
     getTickets: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getalltickets?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "Tickets", id: "LIST" }],
     }),
     getTicketById: builder.query({
       query: (id) => `getticket/${id}`,

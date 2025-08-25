@@ -25,7 +25,7 @@ import { RootState } from "@/reduxs/store";
 import { myNavigation } from "@/utils";
 import { Header, Icon } from "@/components";
 import colors, { gradients } from "@/utils/colors";
-import LogoutModal from "@/components/modal/LogoutModal";
+import LogoutModal from "@/components/modals/LogoutModal";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 

@@ -6,10 +6,12 @@ export const habitatApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/habitat`,
   }),
+  tagTypes: ["Habitats"],
   endpoints: (builder) => ({
     getHabitats: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getallhabitats?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "Habitats", id: "LIST" }],
     }),
     getHabitatById: builder.query({
       query: (id) => `gethabitat/${id}`,

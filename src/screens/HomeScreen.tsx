@@ -6,7 +6,6 @@ import {
   Animated,
   ScrollView,
   StatusBar,
-  Pressable,
   Dimensions,
   Platform,
 } from "react-native";
@@ -16,11 +15,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { Title, Paragraph, Surface, Button } from "react-native-paper";
 import LottieView from "lottie-react-native";
 import { setAnimals } from "@/reduxs/slices/animal.slice";
+import { startRealtime } from "@/realtime";
 import { useGetAnimalsQuery } from "@/reduxs/apis/animal.api";
 import { AppDispatch, RootState } from "@/reduxs/store";
-import colors, { gradients } from "@/utils/colors";
 import { myNavigation, BASE_URL } from "@/utils";
-import { LongCard, ShortCard, Loading, Search, Icon } from "@/components";
+import { LongCard, ShortCard, Loading, Search, Chip } from "@/components";
+import colors, { gradients } from "@/utils/colors";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -76,6 +76,13 @@ const HomeScreen = () => {
       gradient: ["#fa709a", "#fee140"] as const,
     },
   ];
+
+  useEffect(() => {
+    const stop = startRealtime();
+    return () => {
+      stop();
+    };
+  }, []);
 
   useEffect(() => {
     const createFloatingAnimation = (
@@ -274,7 +281,6 @@ const HomeScreen = () => {
               เพลิดเพลินกับอัลปาก้า ลาแคระ และบรรยากาศสุดโรแมนติก
             </Paragraph>
 
-            {/* Stats Cards */}
             <View style={styles.statsContainer}>
               <Animated.View
                 style={[styles.statCard, { transform: [{ scale: scaleAnim }] }]}
@@ -306,87 +312,31 @@ const HomeScreen = () => {
               value=""
               onChangeText={() => {}}
               editable={false}
-              placeholder="🔍 ค้นหาสัตว์ที่ต้องการ..."
+              placeholder="ค้นหาสัตว์ที่ต้องการ..."
               onIconPress={() => navigate("ค้นหา")}
             />
           </View>
 
+          {/* หมวดหมู่: ใช้ Chip.tsx */}
           <View style={styles.categorySection}>
-            <Title style={styles.sectionTitle}>🏷️ หมวดหมู่สัตว์</Title>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.chipScroll}
               contentContainerStyle={styles.chipScrollContent}
             >
-              {categories.map((cat) => (
-                <Animated.View
+              {categories.map((cat, i) => (
+                <Chip
                   key={cat.name}
-                  style={[
-                    styles.chipContainer,
-                    {
-                      transform: [
-                        {
-                          scale: fadeAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.8, 1],
-                            extrapolate: "clamp",
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <Pressable
-                    onPress={() => setSelectedCategory(cat.name)}
-                    style={styles.chipPressable}
-                  >
-                    <LinearGradient
-                      colors={
-                        selectedCategory === cat.name
-                          ? cat.gradient
-                          : ([colors.white, colors.backgroundAlt] as const)
-                      }
-                      style={[
-                        styles.gradientChip,
-                        selectedCategory === cat.name &&
-                          styles.selectedGradientChip,
-                      ]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Icon
-                        icon={cat.icon}
-                        type={
-                          cat.type as
-                            | "FontAwesome"
-                            | "FontAwesome5"
-                            | "Feather"
-                            | "Fontisto"
-                            | "AntDesign"
-                            | "Ionicons"
-                            | "MaterialCommunityIcons"
-                        }
-                        size={16}
-                        color={
-                          selectedCategory === cat.name
-                            ? "#fff"
-                            : colors.textPrimary
-                        }
-                      />
-                      <Paragraph
-                        style={[
-                          styles.chipText,
-                          selectedCategory === cat.name &&
-                            styles.selectedChipText,
-                          { marginLeft: 8 },
-                        ]}
-                      >
-                        {cat.name}
-                      </Paragraph>
-                    </LinearGradient>
-                  </Pressable>
-                </Animated.View>
+                  label={cat.name}
+                  icon={cat.icon}
+                  type={cat.type as any}
+                  selected={selectedCategory === cat.name}
+                  gradient={cat.gradient}
+                  onPress={() => setSelectedCategory(cat.name)}
+                  appearDelay={i * 80}
+                  style={styles.chipContainer}
+                />
               ))}
             </ScrollView>
           </View>
@@ -654,38 +604,6 @@ const styles = StyleSheet.create({
   },
   chipContainer: {
     marginRight: 15,
-  },
-  chipPressable: {
-    borderRadius: 20,
-  },
-  gradientChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.1)",
-  },
-  selectedGradientChip: {
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  chipEmoji: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  selectedChipText: {
-    color: "#ffffff",
-    fontWeight: "bold",
   },
   sectionHeader: {
     paddingHorizontal: 20,

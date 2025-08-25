@@ -9,22 +9,25 @@ import {
 } from "react-native";
 import { Text, Surface } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
+import { startRealtime } from "@/realtime";
 import { colors } from "@/utils";
 import { useGetLocationsQuery } from "@/reduxs/apis/location.api";
-import { Header, Icon, Loading, Pin } from "@/components";
+import { Header, Icon, Loading, Pin, Chip } from "@/components";
+import MapModal, { Marker } from "@/components/modals/MapModal";
 import type { Location } from "@/interfaces/location.interface";
-import MapModal, { Marker } from "@/components/modal/MapModal";
 
 function parseNum(n?: string) {
   const v = parseFloat(String(n ?? "").replace(",", "."));
   return Number.isFinite(v) ? v : NaN;
 }
+
 function splitCsv(csv?: string) {
   return (csv ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
 function pickIconAndColor(acts: string[]) {
   const a = new Set(acts);
   if (a.has("สัตว์"))
@@ -84,11 +87,14 @@ const MapScreen = () => {
 
   const filterBarAnim = useRef(new Animated.Value(100)).current;
 
-  const { data, isLoading } = useGetLocationsQuery({
-    pageSize: 100,
-    currentPage: 1,
-    search: "",
-  });
+  const { data, isLoading } = useGetLocationsQuery({});
+
+  useEffect(() => {
+    const stop = startRealtime();
+    return () => {
+      stop();
+    };
+  }, []);
 
   useEffect(() => {
     Animated.spring(filterBarAnim, {
@@ -187,6 +193,7 @@ const MapScreen = () => {
     setSelectedLocation(m);
     setShowModal(true);
   };
+
   const handleFilterChange = (k: string) => setActiveFilter(k);
 
   if (isLoading) return <Loading />;
@@ -238,48 +245,19 @@ const MapScreen = () => {
             contentContainerStyle={styles.filterScrollContent}
             showsHorizontalScrollIndicator={false}
           >
-            {filters.map((f) => {
-              const selected = activeFilter === f.key;
-              return (
-                <Surface
-                  key={f.key}
-                  style={[
-                    styles.modernFilterChip,
-                    selected && { backgroundColor: f.color },
-                  ]}
-                  elevation={selected ? 5 : 3}
-                >
-                  <TouchableOpacity
-                    onPress={() => handleFilterChange(f.key)}
-                    style={styles.filterChipContent}
-                  >
-                    <Icon
-                      icon={f.icon}
-                      type="MaterialCommunityIcons"
-                      size={18}
-                      color={selected ? colors.white : f.color}
-                    />
-                    <Text
-                      style={[
-                        styles.modernFilterText,
-                        { color: selected ? colors.white : colors.textPrimary },
-                        selected && styles.activeModernFilterText,
-                      ]}
-                    >
-                      {f.label}
-                    </Text>
-                    {selected && (
-                      <View
-                        style={[
-                          styles.selectedIndicator,
-                          { backgroundColor: colors.white },
-                        ]}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </Surface>
-              );
-            })}
+            {filters.map((f, i) => (
+              <Chip
+                key={f.key}
+                label={f.label}
+                icon={f.icon}
+                type="MaterialCommunityIcons"
+                selected={activeFilter === f.key}
+                gradient={[f.color, f.color]}
+                onPress={() => handleFilterChange(f.key)}
+                appearDelay={i * 80}
+                style={{ marginRight: 12 }}
+              />
+            ))}
           </ScrollView>
         </LinearGradient>
       </Animated.View>

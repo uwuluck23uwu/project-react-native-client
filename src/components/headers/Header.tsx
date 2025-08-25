@@ -9,17 +9,17 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import { Appbar, Text, Surface } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Appbar, Text, Surface } from "react-native-paper";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/reduxs/store";
-import { logout } from "@/reduxs/slices/auth.slice";
 import { Icon } from "@/components";
-import colors, { gradients } from "@/utils/colors";
+import { logout } from "@/reduxs/slices/auth.slice";
 import { BASE_URL } from "@/utils";
+import { RootState } from "@/reduxs/store";
+import colors, { gradients } from "@/utils/colors";
 
 const { width, height } = Dimensions.get("window");
 
@@ -239,54 +239,6 @@ const Header = ({ options }: Prop) => {
             </Text>
           </View>
         </TouchableOpacity>
-
-        {/* User Menu Dropdown */}
-        {showUserMenu && (
-          <Animated.View
-            style={[
-              styles.userDropdown,
-              {
-                transform: [{ scale: userMenuScale }],
-              },
-            ]}
-          >
-            <BlurView intensity={20} style={styles.dropdownBlur}>
-              <Surface style={styles.dropdownSurface} elevation={4}>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={handleProfile}
-                >
-                  <Icon
-                    icon="account-outline"
-                    type="MaterialCommunityIcons"
-                    size={18}
-                    color={colors.textPrimary}
-                  />
-                  <Text style={styles.dropdownItemText}>ข้อมูลส่วนตัว</Text>
-                </TouchableOpacity>
-
-                <View style={styles.dropdownDivider} />
-
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={handleLogout}
-                >
-                  <Icon
-                    icon="logout"
-                    type="MaterialCommunityIcons"
-                    size={18}
-                    color={colors.error}
-                  />
-                  <Text
-                    style={[styles.dropdownItemText, { color: colors.error }]}
-                  >
-                    ออกจากระบบ
-                  </Text>
-                </TouchableOpacity>
-              </Surface>
-            </BlurView>
-          </Animated.View>
-        )}
       </View>
     );
   };

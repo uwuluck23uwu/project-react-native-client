@@ -8,6 +8,8 @@ import Search from "./searchs/Search";
 import SearchItem from "./searchs/SearchItem";
 import Loading from "./Loading";
 import Pin from "./Pin";
+import Chip from "./Chip";
+import PaymentItem from "./payments/PaymentItem";
 
 export {
   TicketCard,
@@ -20,4 +22,6 @@ export {
   SearchItem,
   Loading,
   Pin,
+  Chip,
+  PaymentItem,
 };

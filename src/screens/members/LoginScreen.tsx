@@ -12,12 +12,14 @@ import {
   KeyboardAvoidingView,
   SafeAreaView,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { useDispatch } from "react-redux";
+import { LinearGradient } from "expo-linear-gradient";
 import { Formik, FormikProps } from "formik";
 import { TextInput, Avatar, Portal, Snackbar } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { Icon } from "@/components";
+import { setCredentials } from "@/reduxs/slices/auth.slice";
 import { LoginValidation } from "@/validations/validation";
 import { useLoginMutation } from "@/reduxs/apis/auth.api";
 import { myNavigation, colors } from "@/utils";
@@ -25,7 +27,7 @@ import { myNavigation, colors } from "@/utils";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 type FormValues = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
@@ -38,11 +40,36 @@ interface FormField {
   keyboardType?: "default" | "email-address";
 }
 
+const getErrorMessage = (err: any): string => {
+  const fromRtk = err?.data?.message || err?.data?.Message;
+  let fromJson = "";
+  try {
+    const parsed = JSON.parse(err?.message || err?.error || "{}");
+    fromJson = parsed?.data?.message || parsed?.message || "";
+  } catch (_) {}
+  if (err?.status === "FETCH_ERROR") return "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้";
+  if (err?.status === 401)
+    return fromRtk || fromJson || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+  if (err?.status === 400)
+    return fromRtk || fromJson || "ข้อมูลที่ส่งไม่ถูกต้อง";
+  if (err?.status === 403) return fromRtk || fromJson || "ไม่มีสิทธิ์เข้าถึง";
+  return fromRtk || fromJson || "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง";
+};
+
+const decodeJwt = (token: string) => {
+  const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+  const json =
+    typeof atob === "function"
+      ? decodeURIComponent(escape(atob(b64)))
+      : Buffer.from(b64, "base64").toString("utf8");
+  return JSON.parse(json);
+};
+
 const LoginScreen = () => {
   const { navigate, goBack } = myNavigation();
+  const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
-  // State
   const [showPassword, setShowPassword] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -50,7 +77,6 @@ const LoginScreen = () => {
     "success"
   );
 
-  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -66,11 +92,11 @@ const LoginScreen = () => {
 
   const formFields: FormField[] = [
     {
-      name: "email",
-      label: "อีเมล",
-      icon: "mail-outline",
+      name: "identifier",
+      label: "อีเมลหรือชื่อผู้ใช้",
+      icon: "person-outline",
       iconLibrary: "Ionicons",
-      keyboardType: "email-address",
+      keyboardType: "default",
     },
     {
       name: "password",
@@ -82,7 +108,6 @@ const LoginScreen = () => {
   ];
 
   useEffect(() => {
-    // Entrance animation sequence
     Animated.sequence([
       Animated.parallel([
         Animated.timing(headerAnim, {
@@ -113,7 +138,6 @@ const LoginScreen = () => {
       }),
     ]).start();
 
-    // Stagger field animations
     setTimeout(() => {
       const fieldAnimSequence = fieldAnimations.map((anim, index) =>
         Animated.timing(anim, {
@@ -123,7 +147,6 @@ const LoginScreen = () => {
           useNativeDriver: true,
         })
       );
-
       Animated.stagger(100, [
         ...fieldAnimSequence,
         Animated.timing(buttonAnim, {
@@ -134,7 +157,6 @@ const LoginScreen = () => {
       ]).start();
     }, 500);
 
-    // Continuous pulse animation for logo
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -150,208 +172,77 @@ const LoginScreen = () => {
       ])
     );
     pulse.start();
-
     return () => pulse.stop();
   }, []);
 
-  const handleLogin = async (values: { email: string; password: string }) => {
+  const handleLogin = async (values: {
+    identifier: string;
+    password: string;
+  }) => {
     try {
-      await login(values).unwrap();
+      const res = await login({
+        identifier: values.identifier,
+        password: values.password,
+      }).unwrap();
+
+      const accessToken =
+        res?.data?.accessToken ??
+        res?.data?.AccessToken ??
+        res?.accessToken ??
+        res?.AccessToken;
+      const refreshToken =
+        res?.data?.refreshToken ??
+        res?.data?.RefreshToken ??
+        res?.refreshToken ??
+        res?.RefreshToken;
+
+      if (!accessToken) throw new Error("ไม่พบ accessToken จากเซิร์ฟเวอร์");
+
+      const payload = decodeJwt(accessToken);
+
+      const userId = payload.sub ?? null;
+      const username =
+        payload.unique_name ||
+        payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
+        payload.name ||
+        null;
+      const role =
+        payload.role ||
+        payload[
+          "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        ] ||
+        null;
+      const email = payload.email ?? null;
+      const phone = payload.phone ?? null;
+      const imageUrl = payload.image_url || null;
+
+      dispatch(
+        setCredentials({
+          accessToken,
+          refreshToken: refreshToken ?? undefined,
+          userId,
+          username,
+          role,
+          email,
+          phone,
+          imageUrl,
+        })
+      );
 
       setSnackbarType("success");
       setSnackbarMessage("เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ");
       setSnackbarVisible(true);
 
-      setTimeout(() => {
-        navigate("หน้าหลัก");
-      }, 1500);
+      setTimeout(() => navigate("หน้าหลัก"), 800);
     } catch (err: any) {
-      console.error("เข้าสู่ระบบไม่สำเร็จ:", err);
+      const msg = getErrorMessage(err);
       setSnackbarType("error");
-      setSnackbarMessage(err?.data?.message || "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      setSnackbarMessage(msg);
       setSnackbarVisible(true);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev);
-  };
-
-  const renderHeader = () => (
-    <Animated.View
-      style={[
-        styles.header,
-        {
-          transform: [{ translateY: headerAnim }],
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={["#667eea", "#764ba2"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <BlurView intensity={20} tint="dark" style={styles.headerBlur} />
-
-        {/* Back Button */}
-        <Animated.View
-          style={[
-            styles.backButtonContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Pressable onPress={goBack} style={styles.backButton}>
-            <LinearGradient
-              colors={[colors.white20, colors.white10]}
-              style={styles.backButtonGradient}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.white} />
-            </LinearGradient>
-          </Pressable>
-        </Animated.View>
-
-        {/* Decorative Pattern */}
-        <View style={styles.patternContainer}>
-          {[...Array(15)].map((_, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.patternDot,
-                {
-                  opacity: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 0.1],
-                  }),
-                },
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* Header Content */}
-        <Animated.View
-          style={[
-            styles.headerContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.headerTitle}>Primo Piazza</Text>
-          <Text style={styles.headerSubtitle}>เข้าสู่ระบบ</Text>
-          <Text style={styles.welcomeText}>ยินดีต้อนรับกลับมา</Text>
-
-          <View style={styles.headerDecoration}>
-            <LinearGradient
-              colors={[colors.accentGold, colors.accentGoldLight]}
-              style={styles.decorativeLine}
-            />
-          </View>
-        </Animated.View>
-      </LinearGradient>
-    </Animated.View>
-  );
-
-  const renderLogo = () => (
-    <Animated.View
-      style={[
-        styles.logoContainer,
-        {
-          opacity: logoAnim,
-          transform: [
-            {
-              translateY: logoAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-            {
-              scale: Animated.multiply(
-                logoAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-                pulseAnim
-              ),
-            },
-          ],
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={["#FFD700", "#FFA500"]}
-        style={styles.logoGradient}
-      >
-        <Avatar.Image
-          source={require("@/../assets/icon.png")}
-          size={140}
-          style={styles.logo}
-        />
-      </LinearGradient>
-
-      {/* Logo Glow Effect */}
-      <View style={styles.logoGlow}>
-        <LinearGradient
-          colors={[colors.accentGold + "40", "transparent"]}
-          style={styles.logoGlowGradient}
-        />
-      </View>
-
-      {/* Floating particles around logo */}
-      {[...Array(6)].map((_, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.floatingParticle,
-            {
-              opacity: logoAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 0.6],
-              }),
-              transform: [
-                {
-                  translateX: Math.cos(i * 60 * (Math.PI / 180)) * 80,
-                },
-                {
-                  translateY: Math.sin(i * 60 * (Math.PI / 180)) * 80,
-                },
-                { scale: pulseAnim },
-              ],
-            },
-          ]}
-        />
-      ))}
-    </Animated.View>
-  );
-
-  const renderWelcomeMessage = () => (
-    <Animated.View
-      style={[
-        styles.welcomeContainer,
-        {
-          opacity: logoAnim,
-          transform: [
-            {
-              translateY: logoAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [20, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <Text style={styles.welcomeTitle}>ยินดีต้อนรับ</Text>
-      <Text style={styles.welcomeSubtitle}>
-        เข้าสู่โลกแห่งความมหัศจรรย์ของ Primo Piazza
-      </Text>
-    </Animated.View>
-  );
+  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
 
   const renderFormField = (
     field: FormField,
@@ -564,7 +455,87 @@ const LoginScreen = () => {
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.content}>
-          {renderHeader()}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                transform: [{ translateY: headerAnim }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={["#667eea", "#764ba2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerGradient}
+            >
+              <BlurView intensity={20} tint="dark" style={styles.headerBlur} />
+
+              {/* Back Button */}
+              <Animated.View
+                style={[
+                  styles.backButtonContainer,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <Pressable onPress={goBack} style={styles.backButton}>
+                  <LinearGradient
+                    colors={[colors.white20, colors.white10]}
+                    style={styles.backButtonGradient}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={24}
+                      color={colors.white}
+                    />
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
+
+              {/* Decorative Pattern */}
+              <View style={styles.patternContainer}>
+                {[...Array(15)].map((_, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.patternDot,
+                      {
+                        opacity: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 0.1],
+                        }),
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+
+              {/* Header Content */}
+              <Animated.View
+                style={[
+                  styles.headerContent,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <Text style={styles.headerTitle}>Primo Piazza</Text>
+                <Text style={styles.headerSubtitle}>เข้าสู่ระบบ</Text>
+                <Text style={styles.welcomeText}>ยินดีต้อนรับกลับมา</Text>
+
+                <View style={styles.headerDecoration}>
+                  <LinearGradient
+                    colors={[colors.accentGold, colors.accentGoldLight]}
+                    style={styles.decorativeLine}
+                  />
+                </View>
+              </Animated.View>
+            </LinearGradient>
+          </Animated.View>
 
           <Animated.View
             style={[
@@ -581,12 +552,101 @@ const LoginScreen = () => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {renderLogo()}
-              {renderWelcomeMessage()}
+              <Animated.View
+                style={[
+                  styles.logoContainer,
+                  {
+                    opacity: logoAnim,
+                    transform: [
+                      {
+                        translateY: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [30, 0],
+                        }),
+                      },
+                      {
+                        scale: Animated.multiply(
+                          logoAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.8, 1],
+                          }),
+                          pulseAnim
+                        ),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={["#FFD700", "#FFA500"]}
+                  style={styles.logoGradient}
+                >
+                  <Avatar.Image
+                    source={require("@/../assets/icon.png")}
+                    size={140}
+                    style={styles.logo}
+                  />
+                </LinearGradient>
+
+                {/* Logo Glow Effect */}
+                <View style={styles.logoGlow}>
+                  <LinearGradient
+                    colors={[colors.accentGold + "40", "transparent"]}
+                    style={styles.logoGlowGradient}
+                  />
+                </View>
+
+                {/* Floating particles around logo */}
+                {[...Array(6)].map((_, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.floatingParticle,
+                      {
+                        opacity: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 0.6],
+                        }),
+                        transform: [
+                          {
+                            translateX: Math.cos(i * 60 * (Math.PI / 180)) * 80,
+                          },
+                          {
+                            translateY: Math.sin(i * 60 * (Math.PI / 180)) * 80,
+                          },
+                          { scale: pulseAnim },
+                        ],
+                      },
+                    ]}
+                  />
+                ))}
+              </Animated.View>
+
+              <Animated.View
+                style={[
+                  styles.welcomeContainer,
+                  {
+                    opacity: logoAnim,
+                    transform: [
+                      {
+                        translateY: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.welcomeTitle}>ยินดีต้อนรับ</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  เข้าสู่โลกแห่งความมหัศจรรย์ของ Primo Piazza
+                </Text>
+              </Animated.View>
 
               <Formik
                 initialValues={{
-                  email: "",
+                  identifier: "",
                   password: "",
                 }}
                 validationSchema={LoginValidation}

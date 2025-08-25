@@ -21,9 +21,9 @@ const expoICON = {
   MaterialIcons,
 };
 
-type IconType = keyof typeof expoICON;
+export type IconType = keyof typeof expoICON;
 
-interface IconProps {
+interface Prop {
   name?: string;
   icon: string;
   size: number;
@@ -31,7 +31,7 @@ interface IconProps {
   type?: IconType;
 }
 
-const Icon = ({ type = "AntDesign", name, icon, size, color }: IconProps) => {
+const Icon = ({ type = "AntDesign", name, icon, size, color }: Prop) => {
   const Icon = expoICON[type];
 
   return (

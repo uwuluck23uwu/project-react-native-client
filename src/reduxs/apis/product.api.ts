@@ -6,10 +6,12 @@ export const productApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/product`,
   }),
+  tagTypes: ["Products"],
   endpoints: (builder) => ({
     getProducts: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getallproducts?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "Products", id: "LIST" }],
     }),
     getProductById: builder.query({
       query: (id) => `getproduct/${id}`,

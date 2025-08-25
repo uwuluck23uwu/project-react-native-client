@@ -1,7 +1,5 @@
-import { Platform } from "react-native";
+// cloudflared tunnel --url https://localhost:7294 --no-tls-verify
+// npm run android
 
-const PORT = 7294;
 export const BASE_URL =
-  Platform.OS === "android"
-    ? `https://10.0.2.2:${PORT}` // Android Emulator
-    : `https://localhost:${PORT}`; // iOS Simulator
+  "https://spies-nextel-grid-inappropriate.trycloudflare.com";

@@ -4,12 +4,11 @@ import {
   View,
   Dimensions,
   TouchableOpacity,
-  StatusBar,
   Platform,
 } from "react-native";
-import { Text, Avatar, Surface } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Text, Avatar, Surface } from "react-native-paper";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -25,8 +24,8 @@ import Animated, {
   RotateInDownLeft,
   FlipInEasyX,
 } from "react-native-reanimated";
-import { colors, myNavigation } from "@/utils";
 import { Icon } from "@/components";
+import { colors, myNavigation } from "@/utils";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -37,7 +36,6 @@ const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 const ApplyScreen = () => {
   const { navigate } = myNavigation();
 
-  // Animation values
   const logoScale = useSharedValue(0);
   const logoRotate = useSharedValue(0);
   const titleOpacity = useSharedValue(0);
@@ -46,9 +44,7 @@ const ApplyScreen = () => {
   const decorativeScale = useSharedValue(0);
   const shimmerTranslateX = useSharedValue(-SCREEN_WIDTH);
 
-  // Initialize animations
   useEffect(() => {
-    // Logo animation sequence
     logoScale.value = withSequence(
       withTiming(1.2, { duration: 600 }),
       withSpring(1, { damping: 12, stiffness: 100 })
@@ -59,36 +55,30 @@ const ApplyScreen = () => {
       withTiming(0, { duration: 400 })
     );
 
-    // Text animations with delays
     titleOpacity.value = withDelay(400, withTiming(1, { duration: 800 }));
     subtitleOpacity.value = withDelay(700, withTiming(1, { duration: 800 }));
 
-    // Buttons slide up
     buttonsTranslateY.value = withDelay(
       1000,
       withSpring(0, { damping: 15, stiffness: 150 })
     );
 
-    // Decorative elements
     decorativeScale.value = withDelay(
       200,
       withSpring(1, { damping: 10, stiffness: 80 })
     );
 
-    // Shimmer effect
     const shimmerLoop = () => {
       shimmerTranslateX.value = withSequence(
         withTiming(SCREEN_WIDTH, { duration: 2000 }),
         withDelay(3000, withTiming(-SCREEN_WIDTH, { duration: 0 }))
       );
 
-      // Loop the shimmer
       setTimeout(shimmerLoop, 5000);
     };
     shimmerLoop();
   }, []);
 
-  // Animated styles
   const logoAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -142,7 +132,6 @@ const ApplyScreen = () => {
   });
 
   const handleRegisterPress = () => {
-    // Add haptic feedback-like animation
     logoScale.value = withSequence(
       withTiming(0.9, { duration: 100 }),
       withSpring(1, { damping: 15, stiffness: 300 })
@@ -151,7 +140,6 @@ const ApplyScreen = () => {
   };
 
   const handleLoginPress = () => {
-    // Add haptic feedback-like animation
     logoScale.value = withSequence(
       withTiming(0.9, { duration: 100 }),
       withSpring(1, { damping: 15, stiffness: 300 })

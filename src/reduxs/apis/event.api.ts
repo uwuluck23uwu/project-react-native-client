@@ -6,10 +6,12 @@ export const eventApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/event`,
   }),
+  tagTypes: ["Events"],
   endpoints: (builder) => ({
     getEvents: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getallevents?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "Events", id: "LIST" }],
     }),
     getEventById: builder.query({
       query: (id) => `getevent/${id}`,

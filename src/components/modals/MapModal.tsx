@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { Modal, Portal, Surface, Text } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
-import colors from "@/utils/colors";
 import { Icon } from "@/components";
+import colors from "@/utils/colors";
 
 export type Marker = {
   id: string;

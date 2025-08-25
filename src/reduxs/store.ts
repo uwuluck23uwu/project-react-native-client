@@ -3,10 +3,10 @@ import { authApi } from "./apis/auth.api";
 import { animalApi } from "./apis/animal.api";
 import { habitatApi } from "./apis/habitat.api";
 import { newsApi } from "./apis/news.api";
+import { locationApi } from "./apis/location.api";
 import { ticketApi } from "./apis/ticket.api";
 import { eventApi } from "./apis/event.api";
 import { productApi } from "./apis/product.api";
-import { locationApi } from "./apis/location.api";
 import authReducer from "./slices/auth.slice";
 import animalReducer from "./slices/animal.slice";
 import ticketReducer from "./slices/ticket.slice";
@@ -20,10 +20,10 @@ export const store = configureStore({
     [animalApi.reducerPath]: animalApi.reducer,
     [habitatApi.reducerPath]: habitatApi.reducer,
     [newsApi.reducerPath]: newsApi.reducer,
+    [locationApi.reducerPath]: locationApi.reducer,
     [ticketApi.reducerPath]: ticketApi.reducer,
     [eventApi.reducerPath]: eventApi.reducer,
     [productApi.reducerPath]: productApi.reducer,
-    [locationApi.reducerPath]: locationApi.reducer,
   },
   middleware: (getDefault) =>
     getDefault().concat(
@@ -31,10 +31,10 @@ export const store = configureStore({
       animalApi.middleware,
       habitatApi.middleware,
       newsApi.middleware,
+      locationApi.middleware,
       ticketApi.middleware,
       eventApi.middleware,
-      productApi.middleware,
-      locationApi.middleware
+      productApi.middleware
     ),
 });
 

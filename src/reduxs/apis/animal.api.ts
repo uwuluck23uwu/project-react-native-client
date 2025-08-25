@@ -6,10 +6,12 @@ export const animalApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api/animal`,
   }),
+  tagTypes: ["Animals"],
   endpoints: (builder) => ({
     getAnimals: builder.query({
       query: ({ pageSize = 10, currentPage = 1, search = "" }) =>
         `getallanimals?pageSize=${pageSize}&currentPage=${currentPage}&search=${search}`,
+      providesTags: [{ type: "Animals", id: "LIST" }],
     }),
     getAnimalById: builder.query({
       query: (id) => `getanimal/${id}`,

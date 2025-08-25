@@ -6,21 +6,28 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { useSelector } from "react-redux";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { Ticket } from "@/interfaces/ticket.interface";
+import { RootState } from "@/reduxs/store";
+import { startRealtime } from "@/realtime";
 import { useGetTicketsQuery } from "@/reduxs/apis/ticket.api";
 import { Header, Loading, TicketCard } from "@/components";
 import { myNavigation, colors, BASE_URL } from "@/utils";
 
 const TicketScreen = () => {
   const navigation = myNavigation();
+
   const { data, isLoading } = useGetTicketsQuery({});
+  const isLoggedIn = useSelector(
+    (state: RootState) => !!state.auth.accessToken
+  );
 
   const scrollY = useSharedValue(0);
   const fabScale = useSharedValue(0);
@@ -40,6 +47,13 @@ const TicketScreen = () => {
       images,
     } as Ticket;
   });
+
+  useEffect(() => {
+    const stop = startRealtime();
+    return () => {
+      stop();
+    };
+  }, []);
 
   useEffect(() => {
     const total = tickets.reduce((sum, item) => {
@@ -117,6 +131,13 @@ const TicketScreen = () => {
             <TouchableOpacity
               style={styles.fabButton}
               onPress={() => {
+                // ดักคนที่ยังไม่เข้าสู่ระบบ
+                if (!isLoggedIn) {
+                  navigation.navigate("สมาชิก");
+                  return;
+                }
+
+                // ถ้าเข้าสู่ระบบแล้วทำงานเดิม
                 const selectedTickets = Object.entries(quantities)
                   .filter(([_, qty]) => qty > 0)
                   .map(([id, qty]) => `${id}:${qty}`);
@@ -128,7 +149,7 @@ const TicketScreen = () => {
                 });
               }}
             >
-              <Text style={styles.fabText}>💳 ชำระเงิน</Text>
+              <Text style={styles.fabText}>ชำระเงิน</Text>
               <Text style={styles.fabSubText}>
                 ฿{selectedTotal.toLocaleString()}
               </Text>
@@ -143,7 +164,7 @@ const TicketScreen = () => {
             colors={[colors.accentGold, colors.accentGoldDark]}
             style={styles.resetFabGradient}
           >
-            <Text style={styles.resetFabText}>🗑️ ยกเลิก</Text>
+            <Text style={styles.resetFabText}>ยกเลิก</Text>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>

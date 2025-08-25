@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { View, TouchableOpacity, Animated, StyleSheet } from "react-native";
 import { Icon } from "@/components";
 import { colors } from "@/utils";
-import type { Marker } from "@/components/modal/MapModal";
+import type { Marker } from "@/components/modals/MapModal";
 
 interface PinProps {
   marker: Marker;
@@ -12,13 +12,7 @@ interface PinProps {
   mapHeight: number;
 }
 
-const Pin: React.FC<PinProps> = ({
-  marker,
-  onPress,
-  index,
-  mapWidth,
-  mapHeight,
-}) => {
+const Pin = ({ marker, onPress, index, mapWidth, mapHeight }: PinProps) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -68,7 +62,6 @@ const Pin: React.FC<PinProps> = ({
     ).start();
   }, []);
 
-  // คำนวณตำแหน่งจากพิกัดแบบเปอร์เซ็นต์
   const left = (marker.x / 100) * mapWidth - 35;
   const top = (marker.y / 100) * mapHeight - 35;
 
