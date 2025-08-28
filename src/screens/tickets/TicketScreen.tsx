@@ -131,22 +131,28 @@ const TicketScreen = () => {
             <TouchableOpacity
               style={styles.fabButton}
               onPress={() => {
-                // ดักคนที่ยังไม่เข้าสู่ระบบ
+                // ถ้ายังไม่เข้าสู่ระบบ ให้พาไปหน้า "สมาชิก"
                 if (!isLoggedIn) {
                   navigation.navigate("สมาชิก");
                   return;
                 }
 
-                // ถ้าเข้าสู่ระบบแล้วทำงานเดิม
-                const selectedTickets = Object.entries(quantities)
-                  .filter(([_, qty]) => qty > 0)
-                  .map(([id, qty]) => `${id}:${qty}`);
+                // map ปริมาณที่เลือก -> items สำหรับ API/PaymentScreen
+                const items = Object.entries(quantities)
+                  .filter(([, qty]) => qty > 0)
+                  .map(([refId, qty]) => ({
+                    refId,
+                    quantity: qty,
+                  }));
+
+                if (items.length === 0) return;
 
                 navigation.navigate("ชำระเงิน", {
                   title: "TicketScreen",
                   price: selectedTotal,
-                  ticketIds: selectedTickets,
-                });
+                  items,
+                  ticketIds: items.map((x) => `${x.refId}:${x.quantity}`),
+                } as any);
               }}
             >
               <Text style={styles.fabText}>ชำระเงิน</Text>
@@ -179,12 +185,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundMain,
   },
-
   listContainer: {
     padding: 16,
     paddingBottom: 120,
   },
-
   imageContainer: {
     width: 120,
     height: 120,
@@ -224,7 +228,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: colors.textPrimary,
   },
-
   contentSection: {
     flex: 1,
     justifyContent: "space-between",
@@ -241,7 +244,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 20,
   },
-
   quantityContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -281,7 +283,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: colors.accentGreen,
   },
-
   fabContainer: {
     position: "absolute",
     right: 20,
@@ -311,7 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.cream,
   },
-
   resetFabContainer: {
     position: "absolute",
     left: 20,

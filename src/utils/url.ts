@@ -2,4 +2,4 @@
 // npm run android
 
 export const BASE_URL =
-  "https://spies-nextel-grid-inappropriate.trycloudflare.com";
+  "https://wholesale-brought-foot-yesterday.trycloudflare.com";

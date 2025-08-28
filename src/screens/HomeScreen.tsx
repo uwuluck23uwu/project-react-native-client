@@ -15,8 +15,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { Title, Paragraph, Surface, Button } from "react-native-paper";
 import LottieView from "lottie-react-native";
 import { setAnimals } from "@/reduxs/slices/animal.slice";
+import { setEvents } from "@/reduxs/slices/event.slice";
+import { setNews } from "@/reduxs/slices/news.slice";
 import { startRealtime } from "@/realtime";
 import { useGetAnimalsQuery } from "@/reduxs/apis/animal.api";
+import { useGetEventsQuery } from "@/reduxs/apis/event.api";
+import { useGetNewsQuery } from "@/reduxs/apis/news.api";
 import { AppDispatch, RootState } from "@/reduxs/store";
 import { myNavigation, BASE_URL } from "@/utils";
 import { LongCard, ShortCard, Loading, Search, Chip } from "@/components";
@@ -41,8 +45,17 @@ const HomeScreen = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ทั้งหมด");
 
-  const { data, isLoading } = useGetAnimalsQuery({});
+  // Get data from APIs
+  const { data: animalsData, isLoading: animalsLoading } = useGetAnimalsQuery(
+    {}
+  );
+  const { data: eventsData, isLoading: eventsLoading } = useGetEventsQuery({});
+  const { data: newsData, isLoading: newsLoading } = useGetNewsQuery({});
+
+  // Get data from Redux store
   const animals = useSelector((state: RootState) => state.animal.animals);
+  const events = useSelector((state: RootState) => state.event.events);
+  const news = useSelector((state: RootState) => state.news.news);
 
   const categories = [
     {
@@ -52,28 +65,22 @@ const HomeScreen = () => {
       gradient: ["#667eea", "#764ba2"] as const,
     },
     {
-      name: "สัตว์บก",
+      name: "สัตว์",
       icon: "paw",
       type: "FontAwesome5",
       gradient: ["#f093fb", "#f5576c"] as const,
     },
     {
-      name: "สัตว์น้ำ",
-      icon: "fish",
+      name: "กิจกรรม",
+      icon: "calendar",
       type: "FontAwesome5",
       gradient: ["#4facfe", "#00f2fe"] as const,
     },
     {
-      name: "สัตว์ปีก",
-      icon: "feather",
-      type: "Feather",
+      name: "ข่าวสาร",
+      icon: "newspaper",
+      type: "FontAwesome5",
       gradient: ["#43e97b", "#38f9d7"] as const,
-    },
-    {
-      name: "สัตว์หายาก",
-      icon: "magic",
-      type: "FontAwesome",
-      gradient: ["#fa709a", "#fee140"] as const,
     },
   ];
 
@@ -126,7 +133,7 @@ const HomeScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (animals.length > 0) {
+    if (animals.length > 0 || events.length > 0 || news.length > 0) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -147,31 +154,102 @@ const HomeScreen = () => {
         }),
       ]).start();
     }
-  }, [animals]);
+  }, [animals, events, news]);
 
+  // Process animals data
   useEffect(() => {
-    const clean = (data?.data?.$values ?? []).map((a: any) => {
+    const cleanAnimals = (animalsData?.data?.$values ?? []).map((a: any) => {
       const imagePath = a.images?.$values?.[0]?.imageUrl;
       return {
         ...a,
         image: imagePath ? `${BASE_URL}${imagePath}` : null,
+        type: "animal",
       };
     });
-    if (clean.length) dispatch(setAnimals(clean));
-  }, [data]);
+    if (cleanAnimals.length) dispatch(setAnimals(cleanAnimals));
+  }, [animalsData]);
 
-  const filteredAnimals = animals.filter((animal) => {
-    const matchesSearch =
-      animal.name.toLowerCase().includes(search.toLowerCase()) ||
-      animal.species?.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "ทั้งหมด" ||
-      animal.habitat?.name === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Process events data
+  useEffect(() => {
+    const cleanEvents = (eventsData?.data?.$values ?? []).map((e: any) => {
+      const imagePath = e.images?.$values?.[0]?.imageUrl;
+      return {
+        ...e,
+        image: imagePath ? `${BASE_URL}${imagePath}` : null,
+        type: "event",
+      };
+    });
+    if (cleanEvents.length) dispatch(setEvents(cleanEvents));
+  }, [eventsData]);
 
-  const topAnimals = filteredAnimals.slice(0, 5);
-  const restAnimals = filteredAnimals.slice(5);
+  // Process news data
+  useEffect(() => {
+    const cleanNews = (newsData?.data?.$values ?? []).map((n: any) => {
+      const imagePath = n.images?.$values?.[0]?.imageUrl;
+      return {
+        ...n,
+        image: imagePath ? `${BASE_URL}${imagePath}` : null,
+        type: "news",
+      };
+    });
+    if (cleanNews.length) dispatch(setNews(cleanNews));
+  }, [newsData]);
+
+  // Combine and filter all content
+  const getAllContent = () => {
+    let allContent = [];
+
+    if (selectedCategory === "ทั้งหมด" || selectedCategory === "สัตว์") {
+      allContent.push(...animals.map((item) => ({ ...item, type: "animal" })));
+    }
+    if (selectedCategory === "ทั้งหมด" || selectedCategory === "กิจกรรม") {
+      allContent.push(...events.map((item) => ({ ...item, type: "event" })));
+    }
+    if (selectedCategory === "ทั้งหมด" || selectedCategory === "ข่าวสาร") {
+      allContent.push(...news.map((item) => ({ ...item, type: "news" })));
+    }
+
+    // Apply search filter
+    if (search) {
+      allContent = allContent.filter((item) => {
+        const searchLower = search.toLowerCase();
+        if (item.type === "animal") {
+          return (
+            item.name?.toLowerCase().includes(searchLower) ||
+            item.species?.toLowerCase().includes(searchLower)
+          );
+        } else if (item.type === "event") {
+          return (
+            item.title?.toLowerCase().includes(searchLower) ||
+            item.description?.toLowerCase().includes(searchLower)
+          );
+        } else if (item.type === "news") {
+          return (
+            item.title?.toLowerCase().includes(searchLower) ||
+            item.contents?.toLowerCase().includes(searchLower)
+          );
+        }
+        return false;
+      });
+    }
+
+    return allContent;
+  };
+
+  const allContent = getAllContent();
+  const topContent = allContent.slice(0, 5);
+  const restContent = allContent.slice(5);
+
+  const getTotalStats = () => {
+    return {
+      animals: animals.length,
+      events: events.length,
+      news: news.length,
+      total: animals.length + events.length + news.length,
+    };
+  };
+
+  const stats = getTotalStats();
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 200],
@@ -191,7 +269,68 @@ const HomeScreen = () => {
     extrapolate: "clamp",
   });
 
-  if (isLoading) return <Loading />;
+  const handleItemPress = (item: any) => {
+    if (item.type === "animal") {
+      navigate("รายละเอียด", { animal: item });
+    } else if (item.type === "event") {
+      navigate("รายละเอียด", { event: item });
+    } else if (item.type === "news") {
+      navigate("รายละเอียด", { news: item });
+    }
+  };
+
+  const renderContentItem = ({ item }: { item: any }) => {
+    return (
+      <Animated.View
+        style={[
+          styles.featuredItem,
+          {
+            transform: [
+              {
+                scale: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.9, 1],
+                  extrapolate: "clamp",
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LongCard
+          data={item}
+          width={320}
+          height={220}
+          onPress={() => handleItemPress(item)}
+        />
+      </Animated.View>
+    );
+  };
+
+  const renderGridItem = ({ item }: { item: any }) => {
+    return (
+      <Animated.View
+        style={[
+          styles.gridItem,
+          {
+            transform: [
+              {
+                scale: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.95, 1],
+                  extrapolate: "clamp",
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <ShortCard data={item} onPress={() => handleItemPress(item)} />
+      </Animated.View>
+    );
+  };
+
+  if (animalsLoading || eventsLoading || newsLoading) return <Loading />;
 
   return (
     <View style={styles.container}>
@@ -278,21 +417,27 @@ const HomeScreen = () => {
               ยินดีต้อนรับสู่เมืองอิตาลีกลางเขาใหญ่
             </Title>
             <Paragraph style={styles.heroText}>
-              เพลิดเพลินกับอัลปาก้า ลาแคระ และบรรยากาศสุดโรแมนติก
+              เพลิดเพลินกับอัลปาก้า ลาแมร์ และบรรยากาศสุดโรแมนติก
             </Paragraph>
 
             <View style={styles.statsContainer}>
               <Animated.View
                 style={[styles.statCard, { transform: [{ scale: scaleAnim }] }]}
               >
-                <Title style={styles.statNumber}>{animals.length}</Title>
-                <Paragraph style={styles.statLabel}>สัตว์ทั้งหมด</Paragraph>
+                <Title style={styles.statNumber}>{stats.animals}</Title>
+                <Paragraph style={styles.statLabel}>สัตว์</Paragraph>
               </Animated.View>
               <Animated.View
                 style={[styles.statCard, { transform: [{ scale: scaleAnim }] }]}
               >
-                <Title style={styles.statNumber}>24/7</Title>
-                <Paragraph style={styles.statLabel}>เปิดบริการ</Paragraph>
+                <Title style={styles.statNumber}>{stats.events}</Title>
+                <Paragraph style={styles.statLabel}>กิจกรรม</Paragraph>
+              </Animated.View>
+              <Animated.View
+                style={[styles.statCard, { transform: [{ scale: scaleAnim }] }]}
+              >
+                <Title style={styles.statNumber}>{stats.news}</Title>
+                <Paragraph style={styles.statLabel}>ข่าวสาร</Paragraph>
               </Animated.View>
             </View>
           </BlurView>
@@ -312,7 +457,7 @@ const HomeScreen = () => {
               value=""
               onChangeText={() => {}}
               editable={false}
-              placeholder="ค้นหาสัตว์ที่ต้องการ..."
+              placeholder="ค้นหาสัตว์ กิจกรรม หรือข่าวสาร..."
               onIconPress={() => navigate("ค้นหา")}
             />
           </View>
@@ -341,90 +486,54 @@ const HomeScreen = () => {
             </ScrollView>
           </View>
 
-          {topAnimals.length > 0 && (
+          {topContent.length > 0 && (
             <View style={styles.featuredSection}>
               <View style={styles.sectionHeader}>
-                <Title style={styles.sectionTitle}>⭐ สัตว์แนะนำ</Title>
+                <Title style={styles.sectionTitle}>⭐ เนื้อหาแนะนำ</Title>
                 <Paragraph style={styles.sectionSubtitle}>
-                  สัตว์ยอดนิยมที่นักท่องเที่ยวชื่นชอบ
+                  เนื้อหายอดนิยมที่นักท่องเที่ยวชื่นชอบ
                 </Paragraph>
               </View>
 
               <Animated.FlatList
-                data={topAnimals}
+                data={topContent}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.animalId}
+                keyExtractor={(item) =>
+                  `${item.type}-${item.animalId || item.eventId || item.newsId}`
+                }
                 contentContainerStyle={styles.featuredList}
-                renderItem={({ item }) => (
-                  <Animated.View
-                    style={[
-                      styles.featuredItem,
-                      {
-                        transform: [
-                          {
-                            scale: fadeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0.9, 1],
-                              extrapolate: "clamp",
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  >
-                    <LongCard
-                      data={item}
-                      width={320}
-                      height={220}
-                      onPress={() => navigate("รายละเอียด", { animal: item })}
-                    />
-                  </Animated.View>
-                )}
+                renderItem={renderContentItem}
               />
             </View>
           )}
 
-          <View style={styles.allAnimalsSection}>
+          <View style={styles.allContentSection}>
             <View style={styles.sectionHeader}>
               <Title style={styles.sectionTitle}>
-                🐾 สัตว์ทั้งหมด ({restAnimals.length})
+                🏠{" "}
+                {selectedCategory === "ทั้งหมด"
+                  ? "เนื้อหาทั้งหมด"
+                  : selectedCategory}{" "}
+                ({restContent.length})
               </Title>
               <Paragraph style={styles.sectionSubtitle}>
-                สำรวจสัตว์น่ารักทุกตัวในสวนสัตว์
+                {selectedCategory === "ทั้งหมด"
+                  ? "สำรวจเนื้อหาน่าสนใจทุกประเภท"
+                  : `เนื้อหาทั้งหมดในหมวด${selectedCategory}`}
               </Paragraph>
             </View>
 
-            {restAnimals.length > 0 ? (
+            {restContent.length > 0 ? (
               <FlatList
-                data={restAnimals}
+                data={restContent}
                 numColumns={2}
                 columnWrapperStyle={styles.columnWrapper}
                 scrollEnabled={false}
-                keyExtractor={(item) => item.animalId}
-                renderItem={({ item }) => (
-                  <Animated.View
-                    style={[
-                      styles.gridItem,
-                      {
-                        transform: [
-                          {
-                            scale: fadeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0.95, 1],
-                              extrapolate: "clamp",
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  >
-                    <ShortCard
-                      data={item}
-                      onPress={() => navigate("รายละเอียด", { animal: item })}
-                    />
-                  </Animated.View>
-                )}
+                keyExtractor={(item) =>
+                  `${item.type}-${item.animalId || item.eventId || item.newsId}`
+                }
+                renderItem={renderGridItem}
               />
             ) : (
               <Surface style={styles.emptyState} elevation={4}>
@@ -440,7 +549,7 @@ const HomeScreen = () => {
                     loop
                     style={styles.emptyAnimation}
                   />
-                  <Title style={styles.emptyTitle}>ไม่พบสัตว์ที่ค้นหา</Title>
+                  <Title style={styles.emptyTitle}>ไม่พบเนื้อหาที่ค้นหา</Title>
                   <Paragraph style={styles.emptyText}>
                     ลองเปลี่ยนคำค้นหาหรือหมวดหมู่ดูนะครับ
                   </Paragraph>
@@ -629,7 +738,7 @@ const styles = StyleSheet.create({
   featuredItem: {
     marginRight: 15,
   },
-  allAnimalsSection: {
+  allContentSection: {
     paddingHorizontal: 20,
   },
   columnWrapper: {

@@ -6,15 +6,20 @@ import { newsApi } from "./apis/news.api";
 import { locationApi } from "./apis/location.api";
 import { ticketApi } from "./apis/ticket.api";
 import { eventApi } from "./apis/event.api";
+import { orderApi } from "./apis/order.api";
 import { productApi } from "./apis/product.api";
 import authReducer from "./slices/auth.slice";
 import animalReducer from "./slices/animal.slice";
+import eventReducer from "./slices/event.slice";
+import newsReducer from "./slices/news.slice";
 import ticketReducer from "./slices/ticket.slice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     animal: animalReducer,
+    event: eventReducer,
+    news: newsReducer,
     ticket: ticketReducer,
     [authApi.reducerPath]: authApi.reducer,
     [animalApi.reducerPath]: animalApi.reducer,
@@ -23,6 +28,7 @@ export const store = configureStore({
     [locationApi.reducerPath]: locationApi.reducer,
     [ticketApi.reducerPath]: ticketApi.reducer,
     [eventApi.reducerPath]: eventApi.reducer,
+    [orderApi.reducerPath]: orderApi.reducer,
     [productApi.reducerPath]: productApi.reducer,
   },
   middleware: (getDefault) =>
@@ -34,6 +40,7 @@ export const store = configureStore({
       locationApi.middleware,
       ticketApi.middleware,
       eventApi.middleware,
+      orderApi.middleware,
       productApi.middleware
     ),
 });

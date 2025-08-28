@@ -4,8 +4,8 @@ import { RootStackParamList } from "@/utils";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const useMyNavigation = () => {
+const MyNavigation = () => {
   return useNavigation<NavigationProp>();
 };
 
-export default useMyNavigation;
+export default MyNavigation;
