@@ -16,15 +16,23 @@ import { BlurView } from "expo-blur";
 import { useDispatch } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import { Formik, FormikProps } from "formik";
-import { TextInput, Avatar, Portal, Snackbar } from "react-native-paper";
+import {
+  TextInput,
+  Avatar,
+  Portal,
+  Snackbar,
+  Button,
+} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { Icon } from "@/components";
 import { setCredentials } from "@/reduxs/slices/auth.slice";
 import { LoginValidation } from "@/validations/validation";
 import { useLoginMutation } from "@/reduxs/apis/auth.api";
 import { myNavigation, colors } from "@/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 type FormValues = {
   identifier: string;
@@ -70,6 +78,9 @@ const LoginScreen = () => {
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
+
   const [showPassword, setShowPassword] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -93,14 +104,14 @@ const LoginScreen = () => {
   const formFields: FormField[] = [
     {
       name: "identifier",
-      label: "อีเมลหรือชื่อผู้ใช้",
+      label: t("อีเมลหรือชื่อผู้ใช้"),
       icon: "person-outline",
       iconLibrary: "Ionicons",
       keyboardType: "default",
     },
     {
       name: "password",
-      label: "รหัสผ่าน",
+      label: t("รหัสผ่าน"),
       icon: "lock-closed-outline",
       iconLibrary: "Ionicons",
       isPassword: true,
@@ -230,7 +241,7 @@ const LoginScreen = () => {
       );
 
       setSnackbarType("success");
-      setSnackbarMessage("เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ");
+      setSnackbarMessage(t("เข้าสู่ระบบสำเร็จ"));
       setSnackbarVisible(true);
 
       setTimeout(() => navigate("หน้าหลัก"), 800);
@@ -369,78 +380,37 @@ const LoginScreen = () => {
         },
       ]}
     >
-      {/* Login Button */}
-      <Pressable
+      <Button
+        mode="contained"
         onPress={handleSubmit}
-        style={({ pressed }) => [
-          styles.confirmButton,
-          pressed && styles.buttonPressed,
-        ]}
+        style={styles.confirmButton}
+        labelStyle={styles.buttonText}
+        icon="account"
+        loading={isLoading}
         disabled={isLoading}
       >
-        <LinearGradient
-          colors={
-            isLoading
-              ? [colors.disabled, colors.disabled]
-              : [colors.primary, colors.primaryDark]
-          }
-          style={styles.confirmButtonGradient}
-        >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Animated.View
-                style={[
-                  styles.loadingSpinner,
-                  {
-                    transform: [
-                      {
-                        rotate: pulseAnim.interpolate({
-                          inputRange: [1, 1.05],
-                          outputRange: ["0deg", "360deg"],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <Ionicons name="refresh" size={20} color={colors.white} />
-              </Animated.View>
-              <Text style={styles.buttonText}>กำลังเข้าสู่ระบบ...</Text>
-            </View>
-          ) : (
-            <>
-              <Ionicons name="log-in" size={20} color={colors.white} />
-              <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>
-            </>
-          )}
-        </LinearGradient>
-      </Pressable>
+        {isLoading ? t("กำลังเข้าสู่ระบบ") : t("เข้าสู่ระบบ")}
+      </Button>
 
-      {/* Cancel Button */}
-      <Pressable
+      <Button
+        mode="outlined"
         onPress={goBack}
-        style={({ pressed }) => [
-          styles.cancelButton,
-          pressed && styles.buttonPressed,
-        ]}
+        style={styles.cancelButton}
+        labelStyle={styles.cancelButtonText}
+        icon="arrow-left"
+        disabled={isLoading}
       >
-        <LinearGradient
-          colors={[colors.white, colors.backgroundCard]}
-          style={styles.cancelButtonGradient}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
-          <Text style={styles.cancelButtonText}>ย้อนกลับ</Text>
-        </LinearGradient>
-      </Pressable>
+        {t("ย้อนกลับ")}
+      </Button>
 
-      {/* Register Link */}
       <Pressable
         onPress={() => navigate("สมัครสมาชิก")}
         style={styles.registerLink}
+        disabled={isLoading}
       >
         <Text style={styles.registerLinkText}>
-          ยังไม่มีบัญชี?{" "}
-          <Text style={styles.registerLinkHighlight}>สมัครสมาชิก</Text>
+          {t("ยังไม่มีบัญชี")}{" "}
+          <Text style={styles.registerLinkHighlight}>{t("สมัครสมาชิก")}</Text>
         </Text>
       </Pressable>
     </Animated.View>
@@ -471,7 +441,6 @@ const LoginScreen = () => {
             >
               <BlurView intensity={20} tint="dark" style={styles.headerBlur} />
 
-              {/* Back Button */}
               <Animated.View
                 style={[
                   styles.backButtonContainer,
@@ -495,7 +464,6 @@ const LoginScreen = () => {
                 </Pressable>
               </Animated.View>
 
-              {/* Decorative Pattern */}
               <View style={styles.patternContainer}>
                 {[...Array(15)].map((_, i) => (
                   <Animated.View
@@ -513,7 +481,6 @@ const LoginScreen = () => {
                 ))}
               </View>
 
-              {/* Header Content */}
               <Animated.View
                 style={[
                   styles.headerContent,
@@ -588,7 +555,6 @@ const LoginScreen = () => {
                   />
                 </LinearGradient>
 
-                {/* Logo Glow Effect */}
                 <View style={styles.logoGlow}>
                   <LinearGradient
                     colors={[colors.accentGold + "40", "transparent"]}
@@ -596,7 +562,6 @@ const LoginScreen = () => {
                   />
                 </View>
 
-                {/* Floating particles around logo */}
                 {[...Array(6)].map((_, i) => (
                   <Animated.View
                     key={i}
@@ -638,9 +603,10 @@ const LoginScreen = () => {
                   },
                 ]}
               >
-                <Text style={styles.welcomeTitle}>ยินดีต้อนรับ</Text>
+                <Text style={styles.welcomeTitle}>{t("ยินดีต้อนรับ")}</Text>
                 <Text style={styles.welcomeSubtitle}>
-                  เข้าสู่โลกแห่งความมหัศจรรย์ของ Primo Piazza
+                  {t("ยินดีต้อนรับ_เข้าสู่โลกแห่งความมหัศจรรย์ของ")} Primo
+                  Piazza
                 </Text>
               </Animated.View>
 
@@ -671,7 +637,6 @@ const LoginScreen = () => {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Success/Error Snackbar */}
       <Portal>
         <Snackbar
           visible={snackbarVisible}
@@ -684,7 +649,7 @@ const LoginScreen = () => {
               : styles.errorSnackbar,
           ]}
           action={{
-            label: "ตกลง",
+            label: t("ตกลง"),
             onPress: () => setSnackbarVisible(false),
             textColor: colors.white,
           }}
@@ -951,34 +916,16 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     borderRadius: 16,
-    overflow: "hidden",
+    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
-  confirmButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
   cancelButton: {
     borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 2,
     borderColor: colors.platinum,
-  },
-  cancelButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 10,
   },
 
   // Register Link
@@ -996,9 +943,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-  },
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
@@ -1008,14 +952,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: colors.textSecondary,
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  loadingSpinner: {
-    // Rotation animation applied in component
   },
 
   // Snackbar

@@ -7,6 +7,7 @@ import { locationApi } from "./apis/location.api";
 import { ticketApi } from "./apis/ticket.api";
 import { eventApi } from "./apis/event.api";
 import { orderApi } from "./apis/order.api";
+import { orderItemApi } from "./apis/orderItem.api";
 import { productApi } from "./apis/product.api";
 import authReducer from "./slices/auth.slice";
 import animalReducer from "./slices/animal.slice";
@@ -29,6 +30,7 @@ export const store = configureStore({
     [ticketApi.reducerPath]: ticketApi.reducer,
     [eventApi.reducerPath]: eventApi.reducer,
     [orderApi.reducerPath]: orderApi.reducer,
+    [orderItemApi.reducerPath]: orderItemApi.reducer,
     [productApi.reducerPath]: productApi.reducer,
   },
   middleware: (getDefault) =>
@@ -41,6 +43,7 @@ export const store = configureStore({
       ticketApi.middleware,
       eventApi.middleware,
       orderApi.middleware,
+      orderItemApi.middleware,
       productApi.middleware
     ),
 });

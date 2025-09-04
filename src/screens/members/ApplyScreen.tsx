@@ -26,8 +26,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { Icon } from "@/components";
 import { colors, myNavigation } from "@/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
@@ -36,13 +38,16 @@ const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 const ApplyScreen = () => {
   const { navigate } = myNavigation();
 
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
+
   const logoScale = useSharedValue(0);
   const logoRotate = useSharedValue(0);
   const titleOpacity = useSharedValue(0);
   const subtitleOpacity = useSharedValue(0);
   const buttonsTranslateY = useSharedValue(100);
   const decorativeScale = useSharedValue(0);
-  const shimmerTranslateX = useSharedValue(-SCREEN_WIDTH);
+  const shimmerTranslateX = useSharedValue(-width);
 
   useEffect(() => {
     logoScale.value = withSequence(
@@ -70,8 +75,8 @@ const ApplyScreen = () => {
 
     const shimmerLoop = () => {
       shimmerTranslateX.value = withSequence(
-        withTiming(SCREEN_WIDTH, { duration: 2000 }),
-        withDelay(3000, withTiming(-SCREEN_WIDTH, { duration: 0 }))
+        withTiming(width, { duration: 2000 }),
+        withDelay(3000, withTiming(-width, { duration: 0 }))
       );
 
       setTimeout(shimmerLoop, 5000);
@@ -149,51 +154,17 @@ const ApplyScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Background Gradient */}
       <LinearGradient
         colors={[colors.primary, colors.primaryLight, colors.accentGreen]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
       >
-        {/* Shimmer Effect */}
         <Animated.View style={[styles.shimmer, shimmerStyle]} />
-
-        {/* Decorative Elements */}
-        <Animated.View
-          style={[styles.decorativeElements, decorativeAnimatedStyle]}
-        >
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-          <View style={[styles.circle, styles.circle4]} />
-
-          {/* Italian-themed decorative icons */}
-          <Animated.View
-            style={[styles.decorativeIcon, styles.icon1]}
-            entering={RotateInDownLeft.delay(1200)}
-          >
-            <Text style={styles.decorativeEmoji}>🏛️</Text>
-          </Animated.View>
-
-          <Animated.View
-            style={[styles.decorativeIcon, styles.icon2]}
-            entering={BounceIn.delay(1400)}
-          >
-            <Text style={styles.decorativeEmoji}>🌿</Text>
-          </Animated.View>
-
-          <Animated.View
-            style={[styles.decorativeIcon, styles.icon3]}
-            entering={FlipInEasyX.delay(1600)}
-          >
-            <Text style={styles.decorativeEmoji}>🦌</Text>
-          </Animated.View>
-        </Animated.View>
 
         {/* Main Content */}
         <View style={styles.content}>
-          {/* Logo Section */}
+          {/* Logo */}
           <View style={styles.logoSection}>
             <Surface style={styles.logoContainer} elevation={5}>
               <LinearGradient
@@ -211,18 +182,19 @@ const ApplyScreen = () => {
             </Surface>
           </View>
 
-          {/* Title Section */}
+          {/* Title */}
           <View style={styles.titleSection}>
             <Animated.Text style={[styles.title, titleAnimatedStyle]}>
               🏛️ Primo Piazza
             </Animated.Text>
 
             <Animated.Text style={[styles.subtitle, subtitleAnimatedStyle]}>
-              ยินดีต้อนรับสู่หมู่บ้านอิตาเลียน{"\n"}
+              {t("ยินดีต้อนรับสู่")}
+              {"\n"}
               ประสบการณ์ที่แสนพิเศษรอคุณอยู่
             </Animated.Text>
 
-            {/* Features List */}
+            {/* Features */}
             <Animated.View
               style={styles.featuresList}
               entering={FadeInUp.delay(1000)}
@@ -234,9 +206,8 @@ const ApplyScreen = () => {
                   size={16}
                   color={colors.accentGold}
                 />
-                <Text style={styles.featureText}>จองตั๋วออนไลน์</Text>
+                <Text style={styles.featureText}>{t("จองตั๋วออนไลน์")}</Text>
               </View>
-
               <View style={styles.featureItem}>
                 <Icon
                   icon="check-circle"
@@ -244,14 +215,15 @@ const ApplyScreen = () => {
                   size={16}
                   color={colors.accentGold}
                 />
-                <Text style={styles.featureText}>ข้อมูลกิจกรรมล่าสุด</Text>
+                <Text style={styles.featureText}>
+                  {t("ข้อมูลกิจกรรมล่าสุด")}
+                </Text>
               </View>
             </Animated.View>
           </View>
 
-          {/* Buttons Section */}
+          {/* Buttons */}
           <Animated.View style={[styles.buttonSection, buttonsAnimatedStyle]}>
-            {/* Register Button */}
             <AnimatedTouchableOpacity
               style={styles.registerButtonContainer}
               onPress={handleRegisterPress}
@@ -260,8 +232,6 @@ const ApplyScreen = () => {
             >
               <LinearGradient
                 colors={[colors.accentGold, colors.accentGoldDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
                 style={styles.registerButton}
               >
                 <Icon
@@ -270,7 +240,9 @@ const ApplyScreen = () => {
                   size={20}
                   color={colors.white}
                 />
-                <Text style={styles.registerButtonText}>สมัครสมาชิก</Text>
+                <Text style={styles.registerButtonText}>
+                  {t("สมัครสมาชิก")}
+                </Text>
                 <Icon
                   icon="arrow-right"
                   type="MaterialCommunityIcons"
@@ -280,7 +252,6 @@ const ApplyScreen = () => {
               </LinearGradient>
             </AnimatedTouchableOpacity>
 
-            {/* Login Button */}
             <AnimatedTouchableOpacity
               style={styles.loginButtonContainer}
               onPress={handleLoginPress}
@@ -295,7 +266,7 @@ const ApplyScreen = () => {
                     size={20}
                     color={colors.white}
                   />
-                  <Text style={styles.loginButtonText}>เข้าสู่ระบบ</Text>
+                  <Text style={styles.loginButtonText}>{t("เข้าสู่ระบบ")}</Text>
                   <Icon
                     icon="arrow-right"
                     type="MaterialCommunityIcons"
@@ -306,16 +277,6 @@ const ApplyScreen = () => {
               </BlurView>
             </AnimatedTouchableOpacity>
           </Animated.View>
-        </View>
-
-        {/* Bottom Wave */}
-        <View style={styles.waveContainer}>
-          <LinearGradient
-            colors={[colors.primaryAlpha50, colors.white30]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.wave}
-          />
         </View>
       </LinearGradient>
     </View>

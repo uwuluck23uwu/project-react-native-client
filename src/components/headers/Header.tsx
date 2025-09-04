@@ -9,13 +9,11 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Appbar, Text, Surface } from "react-native-paper";
+import { Appbar, Text } from "react-native-paper";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
-import { Icon } from "@/components";
 import { logout } from "@/reduxs/slices/auth.slice";
 import { BASE_URL } from "@/utils";
 import { RootState } from "@/reduxs/store";
@@ -33,29 +31,24 @@ const Header = ({ options }: Prop) => {
   const { openDrawer, navigate } = useNavigation<DrawerNavigationProp<any>>();
   const dispatch = useDispatch();
 
-  // Redux state
   const { accessToken, username, imageUrl } = useSelector(
     (state: RootState) => state.auth
   );
   const isAuthenticated = !!accessToken;
 
-  // Local state
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // Animation refs
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // Auth buttons animations
   const authButtonsScale = useRef(new Animated.Value(0)).current;
   const authButtonsOpacity = useRef(new Animated.Value(0)).current;
   const userMenuScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Initial header animations
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -75,7 +68,6 @@ const Header = ({ options }: Prop) => {
       }),
     ]).start();
 
-    // Shimmer animation
     const shimmerLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -95,10 +87,8 @@ const Header = ({ options }: Prop) => {
     return () => shimmerLoop.stop();
   }, []);
 
-  // Animate auth buttons based on authentication state
   useEffect(() => {
     if (isAuthenticated) {
-      // Hide auth buttons, show user menu
       Animated.parallel([
         Animated.timing(authButtonsScale, {
           toValue: 0,
@@ -112,7 +102,6 @@ const Header = ({ options }: Prop) => {
         }),
       ]).start();
     } else {
-      // Show auth buttons, hide user menu
       Animated.parallel([
         Animated.spring(authButtonsScale, {
           toValue: 1,
@@ -168,7 +157,6 @@ const Header = ({ options }: Prop) => {
     navigate("Profile" as never);
   };
 
-  // Animation interpolations
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
@@ -244,7 +232,7 @@ const Header = ({ options }: Prop) => {
   };
 
   return (
-    <>
+    <View>
       <StatusBar
         barStyle="light-content"
         backgroundColor={colors.primary}
@@ -282,7 +270,6 @@ const Header = ({ options }: Prop) => {
           </View>
 
           <View style={styles.headerContent}>
-            {/* Menu Button */}
             <Animated.View
               style={[
                 styles.menuButton,
@@ -299,7 +286,6 @@ const Header = ({ options }: Prop) => {
               />
             </Animated.View>
 
-            {/* Title */}
             <Animated.View style={styles.titleContainer}>
               <View style={styles.titleWrapper}>
                 <Text style={styles.title}>
@@ -308,7 +294,6 @@ const Header = ({ options }: Prop) => {
               </View>
             </Animated.View>
 
-            {/* Right Side - Auth buttons or User menu */}
             <View style={styles.rightSection}>
               {renderAuthButtons()}
               {renderUserMenu()}
@@ -316,7 +301,7 @@ const Header = ({ options }: Prop) => {
           </View>
         </LinearGradient>
       </Animated.View>
-    </>
+    </View>
   );
 };
 
@@ -413,13 +398,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Right Section
   rightSection: {
     minWidth: 80,
     alignItems: "flex-end",
   },
 
-  // Auth Buttons
   authButtonsContainer: {
     alignItems: "flex-end",
   },
@@ -444,7 +427,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // User Menu
   userMenuContainer: {
     position: "relative",
   },
@@ -494,7 +476,6 @@ const styles = StyleSheet.create({
     maxWidth: 60,
   },
 
-  // User Dropdown
   userDropdown: {
     position: "absolute",
     top: 50,
@@ -528,7 +509,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     justifyContent: "center",

@@ -23,8 +23,6 @@ const SearchItem = memo(({ data, isSearch = false, isSearchActive }: Props) => {
           onPress={() => {
             if ("image" in item) {
               navigate("รายละเอียด", { animal: item });
-            } else {
-              console.error("Item is not an Animal");
             }
           }}
         />

@@ -19,38 +19,40 @@ import Svg, {
 } from "react-native-svg";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Icon } from "@/components";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
 import colors, { gradients } from "@/utils/colors";
 import StackNavigation from "./StackNavigation";
 
 const Tab = createBottomTabNavigator();
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
-const tabConfigMap = {
+const getTabConfig = (t: any) => ({
   หน้าหลัก: {
     icon: "paw-outline",
     type: "Ionicons" as const,
-    label: "สัตว์",
-    gradient: ["#FF6B6B", "#FF8E53"],
+    label: t("สัตว์"),
+    gradient: ["#FF6B6B", "#FF8E53"] as const,
   },
   แผนที่: {
     icon: "map-marker-alt",
     type: "FontAwesome5" as const,
-    label: "แผนที่",
-    gradient: ["#4facfe", "#00f2fe"],
+    label: t("แผนที่_tab"),
+    gradient: ["#4facfe", "#00f2fe"] as const,
   },
   ตั๋ว: {
     icon: "ticket-outline",
     type: "Ionicons" as const,
-    label: "บัตร",
-    gradient: ["#43e97b", "#38f9d7"],
+    label: t("บัตร"),
+    gradient: ["#43e97b", "#38f9d7"] as const,
   },
   ตั้งค่า: {
     icon: "settings-outline",
     type: "Ionicons" as const,
-    label: "ตั้งค่า",
-    gradient: ["#fa709a", "#fee140"],
+    label: t("ตั้งค่า_tab"),
+    gradient: ["#fa709a", "#fee140"] as const,
   },
-} as const;
+});
 
 const WaveShape = () => {
   return (
@@ -82,6 +84,10 @@ const WaveShape = () => {
 };
 
 const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
+  const tabConfigMap = getTabConfig(t);
+
   const animatedValues = useRef(
     state.routes.map(() => ({
       scale: new Animated.Value(1),

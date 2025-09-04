@@ -15,6 +15,8 @@ import { useGetLocationsQuery } from "@/reduxs/apis/location.api";
 import { Header, Icon, Loading, Pin, Chip } from "@/components";
 import MapModal, { Marker } from "@/components/modals/MapModal";
 import type { Location } from "@/interfaces/location.interface";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
 
 function parseNum(n?: string) {
   const v = parseFloat(String(n ?? "").replace(",", "."));
@@ -88,6 +90,9 @@ const MapScreen = () => {
   const filterBarAnim = useRef(new Animated.Value(100)).current;
 
   const { data, isLoading } = useGetLocationsQuery({});
+
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
 
   useEffect(() => {
     const stop = startRealtime();
@@ -200,7 +205,8 @@ const MapScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header options={{ title: "แผนที่" }} />
+      {/* ✅ ใช้คำแปลหัวข้อหน้า */}
+      <Header options={{ title: t("แผนที่_title") }} />
 
       <View style={styles.mapContainer}>
         <ImageBackground
@@ -248,7 +254,9 @@ const MapScreen = () => {
             {filters.map((f, i) => (
               <Chip
                 key={f.key}
-                label={f.label}
+                label={
+                  f.key === "all" ? t("ทั้งหมด") : (t(f.label as any) as string)
+                }
                 icon={f.icon}
                 type="MaterialCommunityIcons"
                 selected={activeFilter === f.key}

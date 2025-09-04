@@ -1,7 +1,9 @@
 import HomeScreen from "./HomeScreen";
 import SearchScreen from "./SearchScreen";
-import AnimalDetailsScreen from "./animals/AnimalDetailsScreen";
+import DetailsScreen from "./DetailsScreen";
 import TicketScreen from "./tickets/TicketScreen";
+import UserTicketsScreen from "./tickets/UserTicketsScreen";
+import TicketScannerScreen from "./tickets/TicketScannerScreen";
 import MapScreen from "./maps/MapScreen";
 import PaymentScreen from "./donates/PaymentScreen";
 import SuccessScreen from "./donates/SuccessScreen";
@@ -11,11 +13,14 @@ import RegisterScreen from "./members/RegisterScreen";
 import LoginScreen from "./members/LoginScreen";
 import SettingScreen from "./settings/SettingScreen";
 import AccountScreen from "./settings/AccountScreen";
+import OtpVerificationScreen from "./members/OtpVerificationScreen";
 
 export {
   HomeScreen,
-  AnimalDetailsScreen,
+  DetailsScreen,
   TicketScreen,
+  UserTicketsScreen,
+  TicketScannerScreen,
   MapScreen,
   PaymentScreen,
   SuccessScreen,
@@ -26,4 +31,5 @@ export {
   RegisterScreen,
   LoginScreen,
   SearchScreen,
+  OtpVerificationScreen,
 };

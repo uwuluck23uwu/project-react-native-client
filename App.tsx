@@ -8,10 +8,8 @@ import { MainTabNavigator } from "@/navigates";
 import { RootStackParamList } from "@/utils";
 import { CustomDrawerContent } from "@/components";
 import { ThemeProvider, useTheme } from "@/themes/theme";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import store from "@/reduxs/store";
-
-// const STRIPE_PUBLISHABLE_KEY =
-//   process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51P8zpUJDEspePZjo73Y0CF0vnLNm4em25JMvdXDYvGxCpUC5YL0CHTcTvx5Mo93MiKlzaWJIYUUmgCnGf6J2nH2M00DAUzDZYs";
@@ -21,9 +19,13 @@ const Drawer = createDrawerNavigator<RootStackParamList>();
 export default function App() {
   return (
     <ReduxProvider store={store}>
-      <ThemeProvider>
-        <ThemedApp />
-      </ThemeProvider>
+      <LanguageProvider>
+        {/* เพิ่ม LanguageProvider ที่นี่ */}
+        <ThemeProvider>
+          <ThemedApp />
+        </ThemeProvider>
+      </LanguageProvider>
+      {/* ปิด LanguageProvider ที่นี่ */}
     </ReduxProvider>
   );
 }

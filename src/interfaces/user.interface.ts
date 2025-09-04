@@ -11,3 +11,9 @@ export interface User {
   phone: string | null;
   image?: Image | null;
 }
+
+export interface TempUserData {
+  name: string;
+  email: string;
+  password: string;
+}

@@ -1,4 +1,7 @@
+import { News } from "@/interfaces/news.interface";
+import { Event } from "@/interfaces/event.interface";
 import { Animal } from "@/interfaces/animal.interface";
+import { TempUserData } from "@/interfaces/user.interface";
 
 export type DrawerParamList = {
   DrawerNavigator: undefined;
@@ -10,21 +13,29 @@ export type RootStackParamList = {
   สมาชิก: undefined;
   สมัครสมาชิก: undefined;
   เข้าสู่ระบบ: undefined;
+  ยืนยันOTP: {
+    email: string;
+    tempUserData: TempUserData;
+    fromResend?: boolean;
+  };
 
   หน้าหลัก: undefined;
-  รายละเอียด: { animal: Animal };
+  รายละเอียด: {
+    animal?: Animal;
+    event?: Event;
+    news?: News;
+  };
   ค้นหา: undefined;
 
   แผนที่: undefined;
 
   ตั๋ว: undefined;
+  บัตรของฉัน: undefined;
+  สแกนบัตร: undefined;
   ชำระเงิน: {
     title?: string;
     price?: number;
     quantity?: number;
-    ticketIds?: string[];
-    animalId?: string;
-    donationTypeId?: string;
   };
   เสร็จสิน: {
     title?: string;

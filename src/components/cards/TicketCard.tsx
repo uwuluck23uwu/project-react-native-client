@@ -32,7 +32,6 @@ const TicketCard: React.FC<Props> = ({
 }) => {
   const totalPrice = (item.price ?? 0) * quantity;
 
-  // ✅ ใช้ URL ของรูปตัวแรกในอาร์เรย์ (ถ้ามี)
   const imageUrl = item.images?.[0]?.imageUrl ?? null;
 
   return (
@@ -48,7 +47,6 @@ const TicketCard: React.FC<Props> = ({
         style={styles.cardGradient}
       >
         <View style={styles.cardContent}>
-          {/* รูป */}
           <View style={styles.imageContainer}>
             {imageUrl ? (
               <Animated.Image
@@ -68,7 +66,6 @@ const TicketCard: React.FC<Props> = ({
               </Animated.View>
             )}
 
-            {/* ป้ายราคา */}
             <Animated.View
               style={styles.priceBadge}
               entering={BounceIn.delay(index * 200)}

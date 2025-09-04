@@ -9,23 +9,23 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
-  TouchableOpacity,
   FlatList,
   Animated,
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Text, TextInput, Card } from "react-native-paper";
+import { Text, TextInput, Card, Button } from "react-native-paper";
 import LottieView from "lottie-react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePaymentSheet } from "@stripe/stripe-react-native";
-
 import { Payment } from "@/interfaces/payment.interface";
 import { PaymentValidation } from "@/validations/validation";
 import { RootState } from "@/reduxs/store";
 import { Header, Icon, PaymentItem } from "@/components";
 import { colors, RootStackParamList, myNavigation } from "@/utils";
 import { useCreateOrderMutation } from "@/reduxs/apis/order.api";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
 
 type Props = RouteProp<RootStackParamList, "ชำระเงิน">;
 
@@ -34,10 +34,11 @@ const PaymentScreen = () => {
   const { goBack } = myNavigation();
   const user = useSelector((state: RootState) => state.auth);
 
-  // Stripe PaymentSheet
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
+
   const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
 
-  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -53,7 +54,7 @@ const PaymentScreen = () => {
   const payments: Payment[] = [
     {
       id: "1",
-      name: "บัตรเครดิต/เดบิต",
+      name: t("บัตรเครดิต_เดบิต"),
       icon: "creditcard",
       iconType: "AntDesign",
       color: colors.success,
@@ -61,15 +62,15 @@ const PaymentScreen = () => {
     },
     {
       id: "2",
-      name: "พร้อมเพย์",
+      name: t("พร้อมเพย์"),
       icon: "qrcode-scan",
       iconType: "MaterialCommunityIcons",
       color: colors.warning,
-      description: "สแกน QR Code",
+      description: t("สแกน_QR_Code"),
     },
     {
       id: "3",
-      name: "โอนเงินผ่านธนาคาร",
+      name: t("โอนเงินผ่านธนาคาร"),
       icon: "bank",
       iconType: "MaterialCommunityIcons",
       color: colors.info,
@@ -85,30 +86,12 @@ const PaymentScreen = () => {
     },
   ];
 
-  // ----- รับ params จากหน้า Ticket -----
   const params = (route.params || {}) as any;
-  const {
-    title = "",
-    price: priceParam = 0,
-    items = [],
-    ticketIds = [],
-  } = params;
+  const { title = "", price: priceParam = 0, items = [] } = params;
 
-  // รองรับทั้งรูปแบบใหม่ (items: [{refId,quantity}]) และแบบเก่า (ticketIds: ["ID:QTY"])
-  const legacyItems = (ticketIds || [])
-    .map((s: string) => {
-      const [refId, qtyStr] = (s || "").split(":");
-      const q = parseInt(qtyStr || "0", 10);
-      return refId ? { refId, quantity: isNaN(q) ? 0 : q } : null;
-    })
-    .filter(Boolean) as { refId: string; quantity: number }[];
+  const effectiveItems: { refId: string; quantity: number }[] = items || [];
+  const isDonation = effectiveItems.length === 0;
 
-  const effectiveItems: { refId: string; quantity: number }[] =
-    Array.isArray(items) && items.length > 0 ? items : legacyItems;
-
-  const isDonation = (effectiveItems?.length ?? 0) === 0;
-
-  // ----- animations -----
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -172,7 +155,6 @@ const PaymentScreen = () => {
     "4": "truemoney",
   };
 
-  // ---------- FLOW หลัก: Create order -> init sheet -> present ----------
   const handlePayment = async (form: { price: string }) => {
     if (!selectedMethod) {
       Animated.sequence([
@@ -196,57 +178,68 @@ const PaymentScreen = () => {
       const auth = user as any;
       const userId = auth?.userId ?? auth?.id ?? auth?.profile?.id;
 
-      // payload ที่ backend ต้องการ
-      const payload: any = {
+      const orderPayload: any = {
         userId,
         currency: "thb",
         description: title || "ชำระค่าตั๋ว",
         paymentMethod: paymentMethodMap[selectedMethod],
-        items: effectiveItems,
+        items: [],
       };
 
-      // โหมดบริจาค (ไม่มี items) -> ส่งยอดจากฟอร์ม
       if (isDonation) {
         const amount = parseFloat(form?.price || "0");
         if (!amount || Number.isNaN(amount))
           throw new Error("กรุณาใส่จำนวนเงินให้ถูกต้อง");
-        payload.items = [{ refId: "DONATION", quantity: 1, priceEach: amount }];
+
+        orderPayload.items = [
+          {
+            refId: "DONATION",
+            quantity: 1,
+            priceEach: amount,
+          },
+        ];
+      } else {
+        orderPayload.items = effectiveItems.map((item) => ({
+          refId: item.refId,
+          quantity: item.quantity,
+        }));
       }
 
-      // 1) เรียก API สร้าง Order + PaymentIntent
-      const res: any = await createOrder(payload).unwrap();
+      const res: any = await createOrder(orderPayload).unwrap();
 
-      // 2) ดึง client secret (เผื่อหลายรูปแบบ)
+      const orderId =
+        res?.result?.orderId || res?.data?.orderId || res?.orderId;
       const clientSecret =
         res?.result?.clientSecret ||
         res?.data?.clientSecret ||
-        res?.clientSecret ||
-        res?.payment?.clientSecret;
+        res?.clientSecret;
 
-      if (!clientSecret)
+      if (!clientSecret) {
         throw new Error("ไม่ได้รับ client secret จากเซิร์ฟเวอร์");
+      }
 
-      // 3) init PaymentSheet (โหมด PaymentIntent)
       const { error: initErr } = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: "PrimoPiazza",
         allowsDelayedPaymentMethods: false,
         defaultBillingDetails: { name: auth?.name || "Guest" },
       });
+
       if (initErr) throw new Error(initErr.message);
 
-      // 4) present PaymentSheet
       const { error: presentErr } = await presentPaymentSheet();
       if (presentErr) throw new Error(presentErr.message);
 
-      // 5) สำเร็จ -> โชว์ success สั้น ๆ แล้วเด้งกลับหน้าก่อน
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         goBack();
       }, 1200);
     } catch (e: any) {
-      Alert.alert("ชำระเงินไม่สำเร็จ", e?.message ?? String(e));
+      Alert.alert(
+        "ชำระเงินไม่สำเร็จ",
+        e?.message || e?.data?.message || String(e)
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -266,7 +259,8 @@ const PaymentScreen = () => {
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
-            <Header options={{ title: "ชำระเงิน" }} />
+            {/* ✅ แปลหัวข้อหน้า */}
+            <Header options={{ title: t("ชำระเงิน") }} />
 
             <Formik
               initialValues={{ price: String(priceParam || 0) }}
@@ -294,7 +288,6 @@ const PaymentScreen = () => {
                     },
                   ]}
                 >
-                  {/* Amount */}
                   <Card style={styles.amountCard}>
                     <LinearGradient
                       colors={[colors.white, colors.cream]}
@@ -309,7 +302,8 @@ const PaymentScreen = () => {
                             color={colors.accentGold}
                           />
                         </View>
-                        <Text style={styles.amountLabel}>จำนวนเงิน</Text>
+                        {/* ✅ แปลป้าย "จำนวนเงิน" */}
+                        <Text style={styles.amountLabel}>{t("จำนวนเงิน")}</Text>
                         <Animated.Text
                           style={[
                             styles.amountValue,
@@ -328,8 +322,9 @@ const PaymentScreen = () => {
 
                         {isDonation && (
                           <View style={styles.inputSection}>
+                            {/* ✅ แปล label ช่องกรอกเงินบริจาค */}
                             <TextInput
-                              label="จำนวนเงินบริจาค"
+                              label={t("จำนวนเงินบริจาค")}
                               mode="outlined"
                               style={styles.input}
                               keyboardType="numeric"
@@ -356,7 +351,6 @@ const PaymentScreen = () => {
                     </LinearGradient>
                   </Card>
 
-                  {/* Payment methods */}
                   <Card style={styles.paymentMethodsCard}>
                     <Card.Content>
                       <View style={styles.sectionHeader}>
@@ -366,8 +360,9 @@ const PaymentScreen = () => {
                           size={24}
                           color={colors.primary}
                         />
+                        {/* ✅ แปลหัวข้อส่วนเลือกวิธีชำระเงิน */}
                         <Text style={styles.sectionTitle}>
-                          เลือกช่องทางการชำระเงิน
+                          {t("เลือกช่องทางการชำระเงิน")}
                         </Text>
                       </View>
 
@@ -389,51 +384,35 @@ const PaymentScreen = () => {
                     </Card.Content>
                   </Card>
 
-                  {/* Pay button */}
                   <View style={styles.buttonContainer}>
-                    <TouchableOpacity
+                    <Button
+                      mode="contained"
+                      onPress={handleSubmit as any}
                       style={[
                         styles.paymentButton,
                         (!selectedMethod || isProcessing || isCreating) &&
                           styles.disabledButton,
                       ]}
-                      onPress={handleSubmit as any}
+                      contentStyle={styles.buttonContent}
+                      labelStyle={styles.buttonText}
+                      icon={
+                        !isProcessing && !isCreating
+                          ? "shield-check"
+                          : undefined
+                      }
+                      loading={isProcessing || isCreating}
                       disabled={!selectedMethod || isProcessing || isCreating}
-                      activeOpacity={0.8}
+                      buttonColor={
+                        selectedMethod && !isProcessing && !isCreating
+                          ? colors.primary
+                          : colors.disabled
+                      }
                     >
-                      <LinearGradient
-                        colors={
-                          selectedMethod && !isProcessing && !isCreating
-                            ? [colors.primary, colors.primaryLight]
-                            : [colors.disabled, colors.silver]
-                        }
-                        style={styles.buttonGradient}
-                      >
-                        {isProcessing || isCreating ? (
-                          <View style={styles.processingContainer}>
-                            <LottieView
-                              source={require("@/../assets/animations/loading.json")}
-                              autoPlay
-                              loop
-                              style={styles.loadingAnimation}
-                            />
-                            <Text style={styles.buttonText}>
-                              กำลังดำเนินการ...
-                            </Text>
-                          </View>
-                        ) : (
-                          <View style={styles.buttonContent}>
-                            <Icon
-                              type="MaterialCommunityIcons"
-                              icon="shield-check"
-                              size={20}
-                              color={colors.white}
-                            />
-                            <Text style={styles.buttonText}>ชำระเงิน</Text>
-                          </View>
-                        )}
-                      </LinearGradient>
-                    </TouchableOpacity>
+                      {/* ✅ แปลปุ่มชำระเงิน/กำลังดำเนินการ */}
+                      {isProcessing || isCreating
+                        ? t("กำลังดำเนินการ")
+                        : t("ชำระเงิน")}
+                    </Button>
 
                     <View style={styles.securityInfo}>
                       <Icon
@@ -442,8 +421,11 @@ const PaymentScreen = () => {
                         size={16}
                         color={colors.textSecondary}
                       />
+                      {/* ✅ แปลข้อความความปลอดภัย */}
                       <Text style={styles.securityText}>
-                        การชำระเงินได้รับการปกป้องด้วยระบบความปลอดภัยระดับสูง
+                        {t(
+                          "การชำระเงินได้รับการปกป้องด้วยระบบความปลอดภัยระดับสูง"
+                        )}
                       </Text>
                     </View>
                   </View>
@@ -451,7 +433,6 @@ const PaymentScreen = () => {
               )}
             </Formik>
 
-            {/* Success overlay */}
             {showSuccess && (
               <Animated.View style={styles.successOverlay}>
                 <LinearGradient
@@ -465,9 +446,12 @@ const PaymentScreen = () => {
                       loop={false}
                       style={styles.successAnimation}
                     />
-                    <Text style={styles.successText}>ชำระเงินสำเร็จ!</Text>
+                    {/* ✅ แปลข้อความสำเร็จ */}
+                    <Text style={styles.successText}>
+                      {t("ชำระเงินสำเร็จ")}
+                    </Text>
                     <Text style={styles.successSubtext}>
-                      ขอบคุณสำหรับการสนับสนุน Primo Piazza
+                      {t("ขอบคุณสำหรับการสนับสนุน")}
                     </Text>
                     <View style={styles.successIcons}>
                       <Icon
@@ -564,28 +548,25 @@ const styles = StyleSheet.create({
   buttonContainer: { marginTop: 20 },
   paymentButton: {
     borderRadius: 20,
-    overflow: "hidden",
     elevation: 8,
     shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  disabledButton: { elevation: 3 },
-  buttonGradient: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
+  disabledButton: {
+    elevation: 3,
   },
-  buttonContent: { flexDirection: "row", alignItems: "center" },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
   buttonText: {
     fontSize: 20,
     fontWeight: "bold",
     color: colors.white,
-    marginLeft: 12,
   },
-  processingContainer: { flexDirection: "row", alignItems: "center" },
-  loadingAnimation: { width: 28, height: 28, marginRight: 12 },
 
   securityInfo: {
     flexDirection: "row",

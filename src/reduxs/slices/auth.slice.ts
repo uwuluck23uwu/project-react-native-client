@@ -39,7 +39,6 @@ const authSlice = createSlice({
       state.email = email ?? null;
       state.phone = phone ?? null;
 
-      // AsyncStorage: save values (ไม่ await เพราะ reducers ต้องเป็น synchronous)
       if (accessToken) AsyncStorage.setItem("accessToken", accessToken);
       if (refreshToken) AsyncStorage.setItem("refreshToken", refreshToken);
       if (role) AsyncStorage.setItem("role", role);
@@ -60,7 +59,6 @@ const authSlice = createSlice({
       state.email = null;
       state.phone = null;
 
-      // AsyncStorage: remove values
       AsyncStorage.multiRemove([
         "accessToken",
         "refreshToken",

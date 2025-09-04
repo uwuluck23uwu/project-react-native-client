@@ -21,6 +21,10 @@ import { useGetTicketsQuery } from "@/reduxs/apis/ticket.api";
 import { Header, Loading, TicketCard } from "@/components";
 import { myNavigation, colors, BASE_URL } from "@/utils";
 
+// ✅ เพิ่ม Language Context และ Translation
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
+
 const TicketScreen = () => {
   const navigation = myNavigation();
 
@@ -35,6 +39,10 @@ const TicketScreen = () => {
 
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const [selectedTotal, setSelectedTotal] = useState(0);
+
+  // ✅ ใช้ภาษา
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
 
   const tickets: Ticket[] = (data?.data?.$values ?? []).map((t: any) => {
     const images = (t.images?.$values ?? []).map((img: any) => ({
@@ -100,7 +108,8 @@ const TicketScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header options={{ title: "ตั๋ว" }} />
+      {/* ✅ ใช้คำแปลหัวข้อหน้า */}
+      <Header options={{ title: t("ตั๋ว") }} />
 
       <FlatList
         data={tickets}
@@ -131,13 +140,11 @@ const TicketScreen = () => {
             <TouchableOpacity
               style={styles.fabButton}
               onPress={() => {
-                // ถ้ายังไม่เข้าสู่ระบบ ให้พาไปหน้า "สมาชิก"
                 if (!isLoggedIn) {
                   navigation.navigate("สมาชิก");
                   return;
                 }
 
-                // map ปริมาณที่เลือก -> items สำหรับ API/PaymentScreen
                 const items = Object.entries(quantities)
                   .filter(([, qty]) => qty > 0)
                   .map(([refId, qty]) => ({
@@ -151,11 +158,11 @@ const TicketScreen = () => {
                   title: "TicketScreen",
                   price: selectedTotal,
                   items,
-                  ticketIds: items.map((x) => `${x.refId}:${x.quantity}`),
                 } as any);
               }}
             >
-              <Text style={styles.fabText}>ชำระเงิน</Text>
+              {/* ✅ ใช้คำแปลปุ่มชำระเงิน */}
+              <Text style={styles.fabText}>{t("ชำระเงิน")}</Text>
               <Text style={styles.fabSubText}>
                 ฿{selectedTotal.toLocaleString()}
               </Text>
@@ -170,7 +177,8 @@ const TicketScreen = () => {
             colors={[colors.accentGold, colors.accentGoldDark]}
             style={styles.resetFabGradient}
           >
-            <Text style={styles.resetFabText}>ยกเลิก</Text>
+            {/* ✅ ใช้คำแปลปุ่มยกเลิก */}
+            <Text style={styles.resetFabText}>{t("ยกเลิก")}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>

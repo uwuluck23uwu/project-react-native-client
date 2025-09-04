@@ -7,7 +7,64 @@ import Icon from "../Icon";
 
 export const ShortCard = ({ data, onPress }: any) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const { name, image, breed, rating } = data;
+
+  const getDisplayData = () => {
+    const safeString = (value: any): string => {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") return value;
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    };
+
+    const safeName = safeString(data.name || data.title);
+
+    if (data.type === "animal") {
+      const species = safeString(data.species);
+      const breed = safeString(data.breed);
+      const scientificName = safeString(data.scientificName);
+
+      return {
+        name: safeName || "ไม่ระบุชื่อสัตว์",
+        subtitle: species || breed || scientificName || "ไม่ระบุสายพันธุ์",
+        rating: data.rating || 0,
+      };
+    } else if (data.type === "event") {
+      const location = safeString(data.location);
+
+      return {
+        name: safeName || "ไม่ระบุชื่อกิจกรรม",
+        subtitle: location || "ไม่ระบุสถานที่",
+        rating: data.rating || 0,
+      };
+    } else if (data.type === "news") {
+      let dateString = "ไม่ระบุวันที่";
+      if (data.publishedDate) {
+        try {
+          dateString = new Date(data.publishedDate).toLocaleDateString("th-TH");
+        } catch (error) {
+          dateString = safeString(data.publishedDate) || "ไม่ระบุวันที่";
+        }
+      }
+
+      return {
+        name: safeName || "ไม่ระบุหัวข้อข่าว",
+        subtitle: dateString,
+        rating: data.rating || 0,
+      };
+    }
+
+    const fallbackSubtitle = safeString(
+      data.breed || data.species || data.location || data.scientificName
+    );
+
+    return {
+      name: safeName || "ไม่ระบุชื่อ",
+      subtitle: fallbackSubtitle || "ไม่ระบุข้อมูล",
+      rating: data.rating || 0,
+    };
+  };
+
+  const displayData = getDisplayData();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -32,7 +89,10 @@ export const ShortCard = ({ data, onPress }: any) => {
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <Surface style={styles.enhancedShortCard} elevation={5}>
           <View style={styles.shortCardImageContainer}>
-            <Card.Cover source={{ uri: image }} style={styles.shortCardImage} />
+            <Card.Cover
+              source={{ uri: data.image }}
+              style={styles.shortCardImage}
+            />
             <LinearGradient
               colors={["transparent", colors.black60]}
               style={styles.shortCardGradient}
@@ -40,9 +100,11 @@ export const ShortCard = ({ data, onPress }: any) => {
           </View>
 
           <View style={styles.shortCardContent}>
-            <Title style={styles.shortCardTitle}>{name || "ไม่ระบุชื่อ"}</Title>
-            <Paragraph style={styles.shortCardBreed}>
-              {breed || "ไม่ระบุสายพันธุ์"}
+            <Title style={styles.shortCardTitle} numberOfLines={1}>
+              {displayData.name}
+            </Title>
+            <Paragraph style={styles.shortCardBreed} numberOfLines={1}>
+              {displayData.subtitle}
             </Paragraph>
 
             <View style={styles.shortCardActions}>
@@ -53,7 +115,7 @@ export const ShortCard = ({ data, onPress }: any) => {
                 color={colors.accentGold}
               />
               <Paragraph style={styles.shortCardRating}>
-                {rating || 0}
+                {displayData.rating}
               </Paragraph>
             </View>
           </View>

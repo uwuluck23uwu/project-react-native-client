@@ -42,12 +42,10 @@ const Chip: React.FC<Props> = ({
   onPress,
   appearDelay = 0,
 }) => {
-  // ----- Animations -----
-  const enter = useRef(new Animated.Value(0)).current; // 0 -> 1 (opacity/translate/scale)
-  const press = useRef(new Animated.Value(1)).current; // scale when press in/out
-  const selectBounce = useRef(new Animated.Value(1)).current; // bounce when selected changes
+  const enter = useRef(new Animated.Value(0)).current;
+  const press = useRef(new Animated.Value(1)).current;
+  const selectBounce = useRef(new Animated.Value(1)).current;
 
-  // เล่นตอน mount: จาง->ชัด เลื่อนขึ้นนิด ๆ และซูมนิด ๆ
   useEffect(() => {
     Animated.timing(enter, {
       toValue: 1,
@@ -58,7 +56,6 @@ const Chip: React.FC<Props> = ({
     }).start();
   }, [appearDelay, enter]);
 
-  // เด้งเบา ๆ ตอน selected เปลี่ยน
   useEffect(() => {
     Animated.sequence([
       Animated.timing(selectBounce, {

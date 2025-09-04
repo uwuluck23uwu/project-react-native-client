@@ -13,16 +13,21 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Formik, FormikProps } from "formik";
-import { TextInput, Avatar, Portal, Snackbar } from "react-native-paper";
+import { TextInput, Avatar, Button } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { Icon } from "@/components";
-import { RegisterValidation } from "@/validations/validation";
-import { useRegisterMutation } from "@/reduxs/apis/auth.api";
+import { useSendOtpMutation } from "@/reduxs/apis/auth.api";
 import { myNavigation, colors } from "@/utils";
+import { RegisterValidation } from "@/validations/validation";
+import AlertModal from "@/components/modals/AlertModal";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+// ✅ เพิ่มสำหรับการแปลภาษา
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/translations";
+
+const { width, height } = Dimensions.get("window");
 
 type FormValues = {
   name: string;
@@ -40,22 +45,34 @@ interface FormField {
   keyboardType?: "default" | "email-address";
 }
 
+interface AlertState {
+  visible: boolean;
+  type: "success" | "error" | "warning" | "info" | "confirm";
+  title: string;
+  message: string;
+}
+
 const RegisterScreen = () => {
   const { navigate, goBack } = myNavigation();
-  const [register, { isLoading }] = useRegisterMutation();
+  const [sendOtp, { isLoading }] = useSendOtpMutation();
 
-  // State
+  // ✅ ใช้ Language Context และ Translation
+  const { currentLanguage } = useLanguage();
+  const t = useTranslation(currentLanguage);
+
   const [showPasswords, setShowPasswords] = useState({
     password: false,
     confirmPassword: false,
   });
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarType, setSnackbarType] = useState<"success" | "error">(
-    "success"
-  );
 
-  // Animations
+  // แทนที่ Snackbar state ด้วย AlertModal state
+  const [alert, setAlert] = useState<AlertState>({
+    visible: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -68,30 +85,31 @@ const RegisterScreen = () => {
 
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
+  // ✅ เปลี่ยนฉลากฟิลด์เป็นข้อความจาก t()
   const formFields: FormField[] = [
     {
       name: "name",
-      label: "ชื่อผู้ใช้",
+      label: t("ชื่อผู้ใช้"),
       icon: "person-outline",
       iconLibrary: "Ionicons",
     },
     {
       name: "email",
-      label: "อีเมล",
+      label: t("อีเมล"),
       icon: "mail-outline",
       iconLibrary: "Ionicons",
       keyboardType: "email-address",
     },
     {
       name: "password",
-      label: "รหัสผ่าน",
+      label: t("รหัสผ่าน"),
       icon: "lock-closed-outline",
       iconLibrary: "Ionicons",
       isPassword: true,
     },
     {
       name: "confirmPassword",
-      label: "ยืนยันรหัสผ่าน",
+      label: t("ยืนยันรหัสผ่าน"),
       icon: "lock-closed-outline",
       iconLibrary: "Ionicons",
       isPassword: true,
@@ -99,7 +117,6 @@ const RegisterScreen = () => {
   ];
 
   useEffect(() => {
-    // Entrance animation sequence
     Animated.sequence([
       Animated.parallel([
         Animated.timing(headerAnim, {
@@ -130,7 +147,6 @@ const RegisterScreen = () => {
       }),
     ]).start();
 
-    // Stagger field animations
     setTimeout(() => {
       const fieldAnimSequence = fieldAnimations.map((anim, index) =>
         Animated.timing(anim, {
@@ -152,30 +168,86 @@ const RegisterScreen = () => {
     }, 500);
   }, []);
 
-  const handleRegister = async (values: {
+  const showAlert = (
+    type: "success" | "error" | "warning" | "info" | "confirm",
+    title: string,
+    message: string
+  ) => {
+    setAlert({
+      visible: true,
+      type,
+      title,
+      message,
+    });
+  };
+
+  const hideAlert = () => {
+    setAlert((prev) => ({ ...prev, visible: false }));
+  };
+
+  const handleSendOtp = async (values: {
     name: string;
     email: string;
     password: string;
     confirmPassword?: string;
   }) => {
     try {
-      const { confirmPassword, ...payload } = values;
-      await register(payload).unwrap();
+      // ส่งข้อมูลครบถ้วน
+      const result = await sendOtp({
+        email: values.email,
+        type: "REGISTRATION",
+        name: values.name,
+        password: values.password,
+      }).unwrap();
 
-      setSnackbarType("success");
-      setSnackbarMessage("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
-      setSnackbarVisible(true);
+      if (
+        result &&
+        (result.success === true ||
+          (result as any).taskStatus === true ||
+          (result.message &&
+            result.message.includes("ส่งรหัส OTP ไปยังอีเมลของคุณแล้ว")))
+      ) {
+        showAlert(
+          "success",
+          "ส่ง OTP สำเร็จ",
+          "ส่งรหัส OTP ไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล"
+        );
 
-      setTimeout(() => {
-        navigate("เข้าสู่ระบบ");
-      }, 2000);
-    } catch (err: any) {
-      console.error("สมัครไม่สำเร็จ:", err);
-      setSnackbarType("error");
-      setSnackbarMessage(
-        err?.data?.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
-      );
-      setSnackbarVisible(true);
+        setTimeout(() => {
+          hideAlert();
+          navigate("ยืนยันOTP", {
+            email: values.email,
+            tempUserData: {
+              name: values.name,
+              email: values.email,
+              password: values.password,
+            },
+          });
+        }, 1500);
+      }
+    } catch (error: any) {
+      let errorTitle = "เกิดข้อผิดพลาด";
+      let errorMessage = "เกิดข้อผิดพลาดในการส่ง OTP";
+
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+
+        if (errorMessage.includes("อีเมลนี้ถูกใช้งานแล้ว")) {
+          errorTitle = "อีเมลซ้ำ";
+        } else if (errorMessage.includes("ชื่อผู้ใช้นี้ถูกใช้งานแล้ว")) {
+          errorTitle = "ชื่อผู้ใช้ซ้ำ";
+        } else if (errorMessage.includes("เกินจำนวนครั้งที่กำหนด")) {
+          errorTitle = "ขอ OTP บ่อยเกินไป";
+        } else if (errorMessage.includes("กรุณารอ")) {
+          errorTitle = "กรุณารอสักครู่";
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      }
+
+      showAlert("error", errorTitle, errorMessage);
     }
   };
 
@@ -186,136 +258,12 @@ const RegisterScreen = () => {
     }));
   };
 
-  const renderHeader = () => (
-    <Animated.View
-      style={[
-        styles.header,
-        {
-          transform: [{ translateY: headerAnim }],
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={["#667eea", "#764ba2"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <BlurView intensity={20} tint="dark" style={styles.headerBlur} />
-
-        {/* Back Button */}
-        <Animated.View
-          style={[
-            styles.backButtonContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Pressable onPress={goBack} style={styles.backButton}>
-            <LinearGradient
-              colors={[colors.white20, colors.white10]}
-              style={styles.backButtonGradient}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.white} />
-            </LinearGradient>
-          </Pressable>
-        </Animated.View>
-
-        {/* Decorative Pattern */}
-        <View style={styles.patternContainer}>
-          {[...Array(15)].map((_, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.patternDot,
-                {
-                  opacity: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 0.1],
-                  }),
-                },
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* Header Content */}
-        <Animated.View
-          style={[
-            styles.headerContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.headerTitle}>Primo Piazza</Text>
-          <Text style={styles.headerSubtitle}>สมัครสมาชิกใหม่</Text>
-
-          <View style={styles.headerDecoration}>
-            <LinearGradient
-              colors={[colors.accentGold, colors.accentGoldLight]}
-              style={styles.decorativeLine}
-            />
-          </View>
-        </Animated.View>
-      </LinearGradient>
-    </Animated.View>
-  );
-
-  const renderLogo = () => (
-    <Animated.View
-      style={[
-        styles.logoContainer,
-        {
-          opacity: logoAnim,
-          transform: [
-            {
-              translateY: logoAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-            {
-              scale: logoAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.8, 1],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={["#FFD700", "#FFA500"]}
-        style={styles.logoGradient}
-      >
-        <Avatar.Image
-          source={require("@/../assets/icon.png")}
-          size={120}
-          style={styles.logo}
-        />
-      </LinearGradient>
-
-      {/* Logo Glow Effect */}
-      <View style={styles.logoGlow}>
-        <LinearGradient
-          colors={[colors.accentGold + "30", "transparent"]}
-          style={styles.logoGlowGradient}
-        />
-      </View>
-    </Animated.View>
-  );
-
   const renderFormField = (
     field: FormField,
     index: number,
     formik: FormikProps<FormValues>
   ) => {
     const { handleChange, handleBlur, values, errors, touched } = formik;
-
     const isPwd = !!field.isPassword;
     const pwdKey = field.name as "password" | "confirmPassword";
 
@@ -435,64 +383,37 @@ const RegisterScreen = () => {
         },
       ]}
     >
-      {/* Register Button */}
-      <Pressable
+      <Button
+        mode="contained"
         onPress={onSubmit}
-        style={({ pressed }) => [
-          styles.confirmButton,
-          pressed && styles.buttonPressed,
-        ]}
+        style={styles.confirmButton}
+        labelStyle={styles.buttonText}
+        icon="send"
+        loading={isLoading}
         disabled={isLoading}
       >
-        <LinearGradient
-          colors={
-            isLoading
-              ? [colors.disabled, colors.disabled]
-              : [colors.primary, colors.primaryDark]
-          }
-          style={styles.confirmButtonGradient}
-        >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Animated.View style={styles.loadingSpinner}>
-                <Ionicons name="refresh" size={20} color={colors.white} />
-              </Animated.View>
-              <Text style={styles.buttonText}>กำลังสมัคร...</Text>
-            </View>
-          ) : (
-            <>
-              <Ionicons name="person-add" size={20} color={colors.white} />
-              <Text style={styles.buttonText}>สมัครสมาชิก</Text>
-            </>
-          )}
-        </LinearGradient>
-      </Pressable>
+        {isLoading ? t("กำลังส่ง_OTP") : t("ส่งรหัสยืนยัน")}
+      </Button>
 
-      {/* Cancel Button */}
-      <Pressable
+      <Button
+        mode="outlined"
         onPress={goBack}
-        style={({ pressed }) => [
-          styles.cancelButton,
-          pressed && styles.buttonPressed,
-        ]}
+        style={styles.cancelButton}
+        labelStyle={styles.cancelButtonText}
+        icon="arrow-left"
+        disabled={isLoading}
       >
-        <LinearGradient
-          colors={[colors.white, colors.backgroundCard]}
-          style={styles.cancelButtonGradient}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
-          <Text style={styles.cancelButtonText}>ย้อนกลับ</Text>
-        </LinearGradient>
-      </Pressable>
+        {t("ย้อนกลับ")}
+      </Button>
 
-      {/* Login Link */}
       <Pressable
         onPress={() => navigate("เข้าสู่ระบบ")}
         style={styles.loginLink}
+        disabled={isLoading}
       >
         <Text style={styles.loginLinkText}>
-          มีบัญชีอยู่แล้ว?{" "}
-          <Text style={styles.loginLinkHighlight}>เข้าสู่ระบบ</Text>
+          {t("มีบัญชีอยู่แล้ว")}{" "}
+          <Text style={styles.loginLinkHighlight}>{t("เข้าสู่ระบบ")}</Text>
         </Text>
       </Pressable>
     </Animated.View>
@@ -507,7 +428,84 @@ const RegisterScreen = () => {
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.content}>
-          {renderHeader()}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                transform: [{ translateY: headerAnim }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={["#667eea", "#764ba2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerGradient}
+            >
+              <BlurView intensity={20} tint="dark" style={styles.headerBlur} />
+
+              <Animated.View
+                style={[
+                  styles.backButtonContainer,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <Pressable onPress={goBack} style={styles.backButton}>
+                  <LinearGradient
+                    colors={[colors.white20, colors.white10]}
+                    style={styles.backButtonGradient}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={24}
+                      color={colors.white}
+                    />
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
+
+              <View style={styles.patternContainer}>
+                {[...Array(15)].map((_, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.patternDot,
+                      {
+                        opacity: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 0.1],
+                        }),
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <Animated.View
+                style={[
+                  styles.headerContent,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <Text style={styles.headerTitle}>Primo Piazza</Text>
+                {/* ✅ ใช้ข้อความจาก translations */}
+                <Text style={styles.headerSubtitle}>{t("สมัครสมาชิก")}</Text>
+
+                <View style={styles.headerDecoration}>
+                  <LinearGradient
+                    colors={[colors.accentGold, colors.accentGoldLight]}
+                    style={styles.decorativeLine}
+                  />
+                </View>
+              </Animated.View>
+            </LinearGradient>
+          </Animated.View>
 
           <Animated.View
             style={[
@@ -524,7 +522,69 @@ const RegisterScreen = () => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {renderLogo()}
+              <Animated.View
+                style={[
+                  styles.logoContainer,
+                  {
+                    opacity: logoAnim,
+                    transform: [
+                      {
+                        translateY: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [30, 0],
+                        }),
+                      },
+                      {
+                        scale: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={["#FFD700", "#FFA500"]}
+                  style={styles.logoGradient}
+                >
+                  <Avatar.Image
+                    source={require("@/../assets/icon.png")}
+                    size={120}
+                    style={styles.logo}
+                  />
+                </LinearGradient>
+
+                <View style={styles.logoGlow}>
+                  <LinearGradient
+                    colors={[colors.accentGold + "30", "transparent"]}
+                    style={styles.logoGlowGradient}
+                  />
+                </View>
+              </Animated.View>
+
+              <Animated.View
+                style={[
+                  styles.welcomeContainer,
+                  {
+                    opacity: logoAnim,
+                    transform: [
+                      {
+                        translateY: logoAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.welcomeTitle}>{t("ยินดีต้อนรับ")}</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  {t("ยินดีต้อนรับ_เข้าสู่โลกแห่งความมหัศจรรย์ของ")} Primo
+                  Piazza
+                </Text>
+              </Animated.View>
 
               <Formik
                 initialValues={{
@@ -536,7 +596,7 @@ const RegisterScreen = () => {
                 validationSchema={RegisterValidation}
                 validateOnChange={false}
                 validateOnBlur={false}
-                onSubmit={handleRegister}
+                onSubmit={handleSendOtp}
               >
                 {(formikProps) => (
                   <View style={styles.formContainer}>
@@ -557,36 +617,20 @@ const RegisterScreen = () => {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Success/Error Snackbar */}
-      <Portal>
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={3000}
-          style={[
-            styles.snackbar,
-            snackbarType === "success"
-              ? styles.successSnackbar
-              : styles.errorSnackbar,
-          ]}
-          action={{
-            label: "ตกลง",
-            onPress: () => setSnackbarVisible(false),
-            textColor: colors.white,
-          }}
-        >
-          <View style={styles.snackbarContent}>
-            <Ionicons
-              name={
-                snackbarType === "success" ? "checkmark-circle" : "alert-circle"
-              }
-              size={20}
-              color={colors.white}
-            />
-            <Text style={styles.snackbarText}>{snackbarMessage}</Text>
-          </View>
-        </Snackbar>
-      </Portal>
+      <AlertModal
+        visible={alert.visible}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onDismiss={hideAlert}
+        buttons={[
+          {
+            text: t("ตกลง"),
+            onPress: hideAlert,
+            style: "default",
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 };
@@ -605,7 +649,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header
   header: {
     height: 160,
     overflow: "hidden",
@@ -680,7 +723,6 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
   },
 
-  // Form
   formWrapper: {
     flex: 1,
     marginTop: -20,
@@ -698,7 +740,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
 
-  // Logo
   logoContainer: {
     alignItems: "center",
     marginVertical: 30,
@@ -729,7 +770,25 @@ const styles = StyleSheet.create({
     borderRadius: 80,
   },
 
-  // Form Fields
+  welcomeContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+    paddingHorizontal: 25,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
   fieldContainer: {
     marginBottom: 20,
   },
@@ -789,44 +848,22 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Buttons
   buttonContainer: {
     marginTop: 30,
     gap: 15,
   },
   confirmButton: {
     borderRadius: 16,
-    overflow: "hidden",
+    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
-  confirmButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 10,
-  },
   cancelButton: {
     borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 2,
     borderColor: colors.platinum,
-  },
-  cancelButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    gap: 10,
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     fontSize: 16,
@@ -838,16 +875,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.textSecondary,
   },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  loadingSpinner: {
-    // Add rotation animation here if needed
-  },
 
-  // Login Link
   loginLink: {
     alignItems: "center",
     marginTop: 20,
@@ -860,29 +888,6 @@ const styles = StyleSheet.create({
   loginLinkHighlight: {
     color: colors.primary,
     fontWeight: "600",
-  },
-
-  // Snackbar
-  snackbar: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    margin: 16,
-  },
-  successSnackbar: {
-    backgroundColor: colors.success,
-  },
-  errorSnackbar: {
-    backgroundColor: colors.error,
-  },
-  snackbarContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  snackbarText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "500",
   },
 
   bottomSpacer: {
